@@ -6,7 +6,7 @@
 // ============================================================
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET, DEFAULT_SLUG } = window.APP_CONFIG;
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---- Helpers ----
 
@@ -47,26 +47,32 @@ function loadFonts(headingFont, bodyFont) {
 // ---- Carga de datos ----
 
 async function fetchInvitation(slug) {
-  const { data: invitation, error } = await supabase
+  console.log('[Landing] Buscando invitación:', slug);
+
+  const { data: invitation, error } = await supabaseClient
     .from('invitations')
     .select('*')
     .eq('slug', slug)
     .eq('is_published', true)
     .single();
 
+  console.log('[Landing] Invitación:', { invitation, error });
   if (error || !invitation) return null;
 
   const [sectionsRes, galleryRes] = await Promise.all([
-    supabase.from('sections')
+    supabaseClient.from('sections')
       .select('*')
       .eq('invitation_id', invitation.id)
       .eq('is_enabled', true)
       .order('position', { ascending: true }),
-    supabase.from('gallery_images')
+    supabaseClient.from('gallery_images')
       .select('*')
       .eq('invitation_id', invitation.id)
       .order('position', { ascending: true })
   ]);
+
+  console.log('[Landing] Secciones:', sectionsRes);
+  console.log('[Landing] Galería:', galleryRes);
 
   return {
     invitation,
