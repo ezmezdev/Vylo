@@ -115,6 +115,7 @@ $('#toggle-password').addEventListener('click', () => {
 });
 
 function showAdmin() {
+  console.log('[Admin] Mostrando panel...');
   $('#auth-view').hidden = true;
   $('#admin-view').hidden = false;
   $('#user-email').textContent = state.user.email;
@@ -125,14 +126,25 @@ function showAdmin() {
 // LISTA DE INVITACIONES
 // ============================================================
 async function loadInvitations() {
-  const { data, error } = await sb
-    .from('invitations')
-    .select('id, slug, event_title, host_names, event_date, is_published')
-    .order('created_at', { ascending: false });
+  console.log('[Admin] Cargando invitaciones...');
+  try {
+    const { data, error } = await sb
+      .from('invitations')
+      .select('id, slug, event_title, host_names, event_date, is_published')
+      .order('created_at', { ascending: false });
 
-  if (error) { toast(error.message, 'error'); return; }
-  state.invitations = data || [];
-  renderInvitationList();
+    console.log('[Admin] Invitaciones resultado:', { data, error });
+    if (error) {
+      console.error('[Admin] Error cargando invitaciones:', error);
+      toast('Error: ' + error.message, 'error');
+      return;
+    }
+    state.invitations = data || [];
+    renderInvitationList();
+  } catch(e) {
+    console.error('[Admin] Excepción en loadInvitations:', e);
+    toast('Error inesperado: ' + e.message, 'error');
+  }
 }
 
 function renderInvitationList() {
