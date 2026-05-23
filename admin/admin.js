@@ -13,8 +13,11 @@ if (!window.supabase) {
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET } = window.APP_CONFIG;
 console.log('[Admin] Conectando a Supabase:', SUPABASE_URL);
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('[Admin] Cliente Supabase creado OK');
+
+document.addEventListener('DOMContentLoaded', function() {
+console.log('[Admin] DOM listo, iniciando...');
 
 // Estado global
 const state = {
@@ -60,7 +63,7 @@ function localToIso(local) {
 // AUTH
 // ============================================================
 async function checkAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession();
   if (session) {
     state.user = session.user;
     showAdmin();
@@ -77,7 +80,7 @@ $('#login-form').addEventListener('submit', async e => {
   const password = fd.get('password');
   console.log('[Admin] Intentando login con:', email);
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
   console.log('[Admin] Respuesta login:', { data, error });
 
@@ -92,7 +95,7 @@ $('#login-form').addEventListener('submit', async e => {
 });
 
 $('#logout-btn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   state.user = null;
   $('#auth-view').hidden = false;
   $('#admin-view').hidden = true;
@@ -189,7 +192,7 @@ $('#new-invitation-btn').addEventListener('click', async () => {
     { section_type: 'gallery',   position: 4, content: { title: 'Galería', subtitle: '' } }
   ].map(s => ({ ...s, invitation_id: data.id }));
 
-  await supabase.from('sections').insert(defaultSections);
+  await sb.from('sections').insert(defaultSections);
   await loadInvitations();
   selectInvitation(data.id);
   toast('Invitación creada');
@@ -200,9 +203,9 @@ async function selectInvitation(id) {
   $('#editor').hidden = false;
 
   const [invRes, secRes, galRes] = await Promise.all([
-    supabase.from('invitations').select('*').eq('id', id).single(),
-    supabase.from('sections').select('*').eq('invitation_id', id).order('position'),
-    supabase.from('gallery_images').select('*').eq('invitation_id', id).order('position')
+    sb.from('invitations').select('*').eq('id', id).single(),
+    sb.from('sections').select('*').eq('invitation_id', id).order('position'),
+    sb.from('gallery_images').select('*').eq('invitation_id', id).order('position')
   ]);
 
   state.currentInvitation = invRes.data;
@@ -285,14 +288,14 @@ $('#form-general').addEventListener('submit', async e => {
   if (heroFile && heroFile.size > 0) {
     const ext = heroFile.name.split('.').pop();
     const path = `${state.currentInvitation.id}/hero-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage
+    const { error: upErr } = await sb.storage
       .from(STORAGE_BUCKET)
       .upload(path, heroFile, { upsert: true });
     if (upErr) { toast(upErr.message, 'error'); return; }
     update.hero_image_url = path;
   }
 
-  const { error } = await supabase.from('invitations')
+  const { error } = await sb.from('invitations')
     .update(update).eq('id', state.currentInvitation.id);
   if (error) { toast(error.message, 'error'); return; }
 
@@ -326,7 +329,7 @@ $('#form-theme').addEventListener('submit', async e => {
     body_font: fd.get('body_font'),
     base_font_size: Number(fd.get('base_font_size'))
   };
-  const { error } = await supabase.from('invitations')
+  const { error } = await sb.from('invitations')
     .update(update).eq('id', state.currentInvitation.id);
   if (error) { toast(error.message, 'error'); return; }
   toast('Tema actualizado');
@@ -392,7 +395,7 @@ function sectionLabel(type) {
 }
 
 async function toggleSection(section) {
-  const { error } = await supabase.from('sections')
+  const { error } = await sb.from('sections')
     .update({ is_enabled: !section.is_enabled })
     .eq('id', section.id);
   if (error) { toast(error.message, 'error'); return; }
@@ -402,7 +405,7 @@ async function toggleSection(section) {
 
 async function deleteSection(section) {
   if (!confirm(`¿Eliminar la sección "${sectionLabel(section.section_type)}"?`)) return;
-  const { error } = await supabase.from('sections').delete().eq('id', section.id);
+  const { error } = await sb.from('sections').delete().eq('id', section.id);
   if (error) { toast(error.message, 'error'); return; }
   state.currentSections = state.currentSections.filter(s => s.id !== section.id);
   renderSectionsList();
@@ -421,7 +424,7 @@ async function reorderSections(draggedId, targetId) {
   // Reasignar posiciones
   const updates = list.map((s, i) => ({ id: s.id, position: i }));
   for (const u of updates) {
-    await supabase.from('sections').update({ position: u.position }).eq('id', u.id);
+    await sb.from('sections').update({ position: u.position }).eq('id', u.id);
   }
   state.currentSections = list.map((s, i) => ({ ...s, position: i }));
   renderSectionsList();
@@ -432,7 +435,7 @@ $$('.add-section__options button').forEach(btn => {
   btn.addEventListener('click', async () => {
     const type = btn.dataset.add;
     const position = state.currentSections.length;
-    const { data, error } = await supabase.from('sections')
+    const { data, error } = await sb.from('sections')
       .insert({
         invitation_id: state.currentInvitation.id,
         section_type: type,
@@ -564,7 +567,7 @@ $('#section-modal form').addEventListener('submit', async e => {
   // Si los colores son '#000000' por default y no se tocaron, mejor limpiarlos
   // (en este caso simple los enviamos tal cual; el usuario puede usar "Limpiar")
 
-  const { error } = await supabase.from('sections')
+  const { error } = await sb.from('sections')
     .update(update).eq('id', section.id);
   if (error) { toast(error.message, 'error'); return; }
 
@@ -599,7 +602,7 @@ function renderGalleryList() {
     li.querySelectorAll('input').forEach(input => {
       input.addEventListener('blur', async () => {
         const field = input.dataset.field;
-        await supabase.from('gallery_images')
+        await sb.from('gallery_images')
           .update({ [field]: input.value }).eq('id', img.id);
         img[field] = input.value;
       });
@@ -616,11 +619,11 @@ $('#gallery-upload-input').addEventListener('change', async e => {
   for (const file of files) {
     const ext = file.name.split('.').pop();
     const path = `${state.currentInvitation.id}/gallery/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-    const { error: upErr } = await supabase.storage
+    const { error: upErr } = await sb.storage
       .from(STORAGE_BUCKET).upload(path, file);
     if (upErr) { toast(upErr.message, 'error'); continue; }
 
-    const { data, error } = await supabase.from('gallery_images').insert({
+    const { data, error } = await sb.from('gallery_images').insert({
       invitation_id: state.currentInvitation.id,
       image_url: path,
       alt_text: 'Foto del evento',
@@ -638,9 +641,9 @@ async function removeGalleryImage(img) {
   if (!confirm('¿Eliminar esta imagen?')) return;
   // Eliminar de storage si la ruta es relativa
   if (img.image_url && !img.image_url.startsWith('http')) {
-    await supabase.storage.from(STORAGE_BUCKET).remove([img.image_url]);
+    await sb.storage.from(STORAGE_BUCKET).remove([img.image_url]);
   }
-  await supabase.from('gallery_images').delete().eq('id', img.id);
+  await sb.from('gallery_images').delete().eq('id', img.id);
   state.currentGallery = state.currentGallery.filter(g => g.id !== img.id);
   renderGalleryList();
   toast('Imagen eliminada');
@@ -652,7 +655,7 @@ async function removeGalleryImage(img) {
 $('#publish-btn').addEventListener('click', async () => {
   const inv = state.currentInvitation;
   const newState = !inv.is_published;
-  const { error } = await supabase.from('invitations')
+  const { error } = await sb.from('invitations')
     .update({ is_published: newState }).eq('id', inv.id);
   if (error) { toast(error.message, 'error'); return; }
   inv.is_published = newState;
@@ -664,7 +667,7 @@ $('#publish-btn').addEventListener('click', async () => {
 $('#delete-btn').addEventListener('click', async () => {
   const inv = state.currentInvitation;
   if (!confirm(`¿Eliminar definitivamente la invitación "${inv.host_names}"?\nEsta acción no se puede deshacer.`)) return;
-  await supabase.from('invitations').delete().eq('id', inv.id);
+  await sb.from('invitations').delete().eq('id', inv.id);
   state.currentInvitation = null;
   $('#editor').hidden = true;
   $('#empty-state').hidden = false;
@@ -688,3 +691,5 @@ $('#form-general [name="hero_image"]').addEventListener('change', e => {
 // INICIO
 // ============================================================
 checkAuth();
+
+}); // fin DOMContentLoaded
