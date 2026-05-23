@@ -90,8 +90,8 @@ $('#toggle-password').addEventListener('click', () => {
   input.type = showing ? 'password' : 'text';
   btn.setAttribute('aria-pressed', String(!showing));
   btn.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
-  btn.querySelector('.icon-eye').hidden = !showing;
-  btn.querySelector('.icon-eye-off').hidden = showing;
+  $('#icon-eye').style.display = showing ? 'block' : 'none';
+  $('#icon-eye-off').style.display = showing ? 'none' : 'block';
 });
 
 function showAdmin() {
