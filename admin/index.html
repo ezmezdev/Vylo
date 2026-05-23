@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Panel · Invitaciones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="./admin.css" />
+</head>
+<body>
+  <!-- ===== Login ===== -->
+  <section id="auth-view" class="auth">
+    <form id="login-form" class="auth__form" aria-labelledby="auth-title">
+      <h1 id="auth-title">Panel de Invitaciones</h1>
+      <p class="auth__subtitle">Iniciá sesión para administrar las invitaciones</p>
+      <label>
+        <span>Email</span>
+        <input type="email" name="email" required autocomplete="email" />
+      </label>
+      <label>
+        <span>Contraseña</span>
+        <input type="password" name="password" required autocomplete="current-password" />
+      </label>
+      <button type="submit" class="btn btn--primary">Ingresar</button>
+      <p id="auth-error" class="auth__error" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ===== Panel ===== -->
+  <div id="admin-view" hidden>
+    <header class="topbar">
+      <h1 class="topbar__brand">Invitaciones</h1>
+      <div class="topbar__actions">
+        <span id="user-email" class="topbar__user"></span>
+        <button id="logout-btn" class="btn btn--ghost btn--sm">Salir</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- Sidebar: lista de invitaciones -->
+      <aside class="sidebar" aria-label="Lista de invitaciones">
+        <div class="sidebar__header">
+          <h2>Mis invitaciones</h2>
+          <button id="new-invitation-btn" class="btn btn--primary btn--sm" type="button">+ Nueva</button>
+        </div>
+        <ul id="invitation-list" class="invitation-list"></ul>
+      </aside>
+
+      <!-- Editor de la invitación seleccionada -->
+      <section class="editor" id="editor" hidden aria-label="Editor de invitación">
+        <header class="editor__header">
+          <h2 id="editor-title">Editar invitación</h2>
+          <div class="editor__actions">
+            <a id="preview-link" class="btn btn--ghost btn--sm" target="_blank" rel="noopener">Vista previa ↗</a>
+            <button id="publish-btn" class="btn btn--secondary btn--sm" type="button">Publicar</button>
+            <button id="delete-btn" class="btn btn--danger btn--sm" type="button">Eliminar</button>
+          </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="tabs" role="tablist">
+          <button class="tab is-active" role="tab" data-tab="general">General</button>
+          <button class="tab" role="tab" data-tab="theme">Tema</button>
+          <button class="tab" role="tab" data-tab="sections">Secciones</button>
+          <button class="tab" role="tab" data-tab="gallery">Galería</button>
+        </nav>
+
+        <!-- ===== TAB: GENERAL ===== -->
+        <div id="tab-general" class="tab-panel is-active" role="tabpanel">
+          <form id="form-general" class="form-grid">
+            <label class="full">
+              <span>Slug (URL)</span>
+              <input type="text" name="slug" required pattern="[a-z0-9-]+"
+                     placeholder="boda-ana-y-luis" />
+              <small>Solo minúsculas, números y guiones. Se accederá vía /i/[slug]</small>
+            </label>
+
+            <label>
+              <span>Tipo de evento</span>
+              <select name="event_type" required>
+                <option value="boda">Boda</option>
+                <option value="cumpleanos">Cumpleaños</option>
+                <option value="quinceanera">Quinceañera</option>
+                <option value="bautismo">Bautismo</option>
+                <option value="aniversario">Aniversario</option>
+                <option value="otro">Otro</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Anfitriones</span>
+              <input type="text" name="host_names" required placeholder="Ana & Luis" />
+            </label>
+
+            <label>
+              <span>Título del evento</span>
+              <input type="text" name="event_title" required placeholder="Nuestra Boda" />
+            </label>
+
+            <label>
+              <span>Fecha y hora del evento</span>
+              <input type="datetime-local" name="event_date" required />
+            </label>
+
+            <label>
+              <span>Fecha objetivo del contador</span>
+              <input type="datetime-local" name="countdown_target" />
+              <small>Si se omite, usa la fecha del evento</small>
+            </label>
+
+            <label class="full">
+              <span>Foto principal (hero)</span>
+              <input type="file" name="hero_image" accept="image/*" />
+              <img id="hero-preview" class="img-preview" alt="" hidden />
+            </label>
+
+            <label class="full">
+              <span>URL del Google Form (RSVP)</span>
+              <input type="url" name="rsvp_form_url" placeholder="https://forms.gle/..." />
+            </label>
+
+            <label class="full">
+              <span>Ubicación (para calendario)</span>
+              <input type="text" name="calendar_location" placeholder="Hacienda Los Olivos, Mendoza" />
+            </label>
+
+            <label class="full">
+              <span>Descripción (para calendario)</span>
+              <textarea name="calendar_description" rows="3"></textarea>
+            </label>
+
+            <div class="form-actions full">
+              <button type="submit" class="btn btn--primary">Guardar cambios</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ===== TAB: TEMA ===== -->
+        <div id="tab-theme" class="tab-panel" role="tabpanel" hidden>
+          <form id="form-theme" class="form-grid">
+            <label>
+              <span>Color primario / texto</span>
+              <input type="color" name="primary_color" />
+            </label>
+            <label>
+              <span>Color de fondo</span>
+              <input type="color" name="background_color" />
+            </label>
+            <label>
+              <span>Color de acento</span>
+              <input type="color" name="accent_color" />
+            </label>
+
+            <label>
+              <span>Fuente de títulos</span>
+              <select name="heading_font">
+                <option>Cormorant Garamond</option>
+                <option>Playfair Display</option>
+                <option>DM Serif Display</option>
+                <option>Bodoni Moda</option>
+                <option>Italiana</option>
+                <option>Cinzel</option>
+                <option>Marcellus</option>
+                <option>Great Vibes</option>
+                <option>Dancing Script</option>
+                <option>Allura</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Fuente del cuerpo</span>
+              <select name="body_font">
+                <option>Manrope</option>
+                <option>Inter</option>
+                <option>Lato</option>
+                <option>Montserrat</option>
+                <option>Nunito Sans</option>
+                <option>Karla</option>
+                <option>Work Sans</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Tamaño base (px)</span>
+              <input type="number" name="base_font_size" min="12" max="22" />
+            </label>
+
+            <div class="form-actions full">
+              <button type="submit" class="btn btn--primary">Guardar tema</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ===== TAB: SECCIONES ===== -->
+        <div id="tab-sections" class="tab-panel" role="tabpanel" hidden>
+          <p class="hint">Arrastrá las secciones para reordenarlas. Tocá una para editar sus contenidos y estilos.</p>
+          <ul id="sections-list" class="sections-list"></ul>
+          <details class="add-section">
+            <summary>+ Agregar sección</summary>
+            <div class="add-section__options">
+              <button type="button" data-add="hero">Hero (portada)</button>
+              <button type="button" data-add="countdown">Contador regresivo</button>
+              <button type="button" data-add="rsvp">RSVP</button>
+              <button type="button" data-add="calendar">Calendario</button>
+              <button type="button" data-add="gallery">Galería</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- ===== TAB: GALERÍA ===== -->
+        <div id="tab-gallery" class="tab-panel" role="tabpanel" hidden>
+          <div class="gallery-upload">
+            <label class="btn btn--primary">
+              + Subir imágenes
+              <input type="file" id="gallery-upload-input" accept="image/*" multiple hidden />
+            </label>
+            <p class="hint">Las imágenes se suben al bucket "<code>invitations</code>" en Supabase Storage.</p>
+          </div>
+          <ul id="gallery-list" class="gallery-list"></ul>
+        </div>
+      </section>
+
+      <!-- Mensaje vacío -->
+      <section id="empty-state" class="empty">
+        <p>Seleccioná una invitación de la lista, o creá una nueva.</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===== Modal de edición de sección ===== -->
+  <dialog id="section-modal" class="modal" aria-labelledby="section-modal-title">
+    <form method="dialog" class="modal__form">
+      <header class="modal__header">
+        <h3 id="section-modal-title">Editar sección</h3>
+        <button type="button" class="modal__close" aria-label="Cerrar">×</button>
+      </header>
+      <div class="modal__body">
+        <label class="checkbox">
+          <input type="checkbox" name="is_enabled" />
+          <span>Sección habilitada</span>
+        </label>
+
+        <fieldset>
+          <legend>Estilos (vacío = hereda del tema global)</legend>
+          <div class="form-grid">
+            <label>
+              <span>Color de fondo</span>
+              <input type="color" name="background_color" />
+              <button type="button" class="link-btn" data-clear="background_color">Limpiar</button>
+            </label>
+            <label>
+              <span>Color de texto</span>
+              <input type="color" name="text_color" />
+              <button type="button" class="link-btn" data-clear="text_color">Limpiar</button>
+            </label>
+            <label>
+              <span>Fuente de títulos</span>
+              <input type="text" name="heading_font" placeholder="Heredar" />
+            </label>
+            <label>
+              <span>Fuente de cuerpo</span>
+              <input type="text" name="body_font" placeholder="Heredar" />
+            </label>
+            <label>
+              <span>Tamaño (px)</span>
+              <input type="number" name="font_size" min="12" max="32" />
+            </label>
+            <label>
+              <span>Padding vertical (px)</span>
+              <input type="number" name="padding_y" min="0" max="200" />
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Contenido</legend>
+          <div id="section-content-fields" class="form-grid"></div>
+        </fieldset>
+      </div>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-action="close">Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar sección</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Notificaciones -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../public/js/config.js"></script>
+  <script src="./admin.js" type="module"></script>
+</body>
+</html>

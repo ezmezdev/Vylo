@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Invitación digital al evento" />
+  <meta name="theme-color" content="#1a1a1a" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" id="og-title" content="Invitación" />
+  <meta property="og:description" id="og-description" content="Estás invitado/a a nuestro evento" />
+  <meta property="og:image" id="og-image" content="" />
+
+  <title id="page-title">Invitación · Cargando…</title>
+
+  <!-- Preconnect a Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Las fuentes específicas se cargan dinámicamente desde JS según el tema -->
+  <link id="font-link" rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <!-- ===== Skip link para accesibilidad ===== -->
+  <a class="skip-link" href="#main">Saltar al contenido principal</a>
+
+  <!-- ===== Estado de carga ===== -->
+  <div id="loader" class="loader" role="status" aria-live="polite" aria-label="Cargando invitación">
+    <div class="loader__pulse" aria-hidden="true"></div>
+    <p class="loader__text">Preparando tu invitación…</p>
+  </div>
+
+  <!-- ===== Estado de error ===== -->
+  <div id="error-state" class="error-state" hidden>
+    <h1>Invitación no encontrada</h1>
+    <p>El enlace que seguiste no corresponde a una invitación válida o aún no fue publicada.</p>
+  </div>
+
+  <!-- ===== Contenido principal ===== -->
+  <main id="main" class="main" hidden>
+    <!-- Las secciones se renderizan dinámicamente desde JS según la configuración -->
+    <div id="sections-container"></div>
+
+    <!-- Footer fijo, siempre visible -->
+    <footer class="footer" role="contentinfo">
+      <div class="footer__inner">
+        <p class="footer__hosts" id="footer-hosts"></p>
+        <p class="footer__event" id="footer-event"></p>
+        <p class="footer__small">Invitación digital · Hecha con cariño</p>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ===== Templates de secciones (clonados desde JS) ===== -->
+
+  <template id="tpl-hero">
+    <section class="section section--hero" data-section="hero" aria-labelledby="hero-title">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="hero__content">
+        <p class="hero__eyebrow" data-field="event_type"></p>
+        <h1 class="hero__title" id="hero-title" data-field="host_names"></h1>
+        <p class="hero__subtitle" data-field="subtitle"></p>
+        <figure class="hero__photo">
+          <img data-field="hero_image" alt="" loading="eager" decoding="async" />
+        </figure>
+        <p class="hero__date" data-field="event_date"></p>
+        <blockquote class="hero__quote" data-field="quote"></blockquote>
+        <div class="hero__scroll" aria-hidden="true">
+          <span></span>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-countdown">
+    <section class="section section--countdown" data-section="countdown" aria-labelledby="countdown-title">
+      <div class="section__inner">
+        <h2 class="section__title" id="countdown-title" data-field="title"></h2>
+        <p class="section__subtitle" data-field="subtitle"></p>
+        <div class="countdown" role="timer" aria-live="polite" aria-atomic="true">
+          <div class="countdown__unit">
+            <span class="countdown__num" data-unit="days">0</span>
+            <span class="countdown__label">Días</span>
+          </div>
+          <div class="countdown__unit">
+            <span class="countdown__num" data-unit="hours">0</span>
+            <span class="countdown__label">Horas</span>
+          </div>
+          <div class="countdown__unit">
+            <span class="countdown__num" data-unit="minutes">0</span>
+            <span class="countdown__label">Minutos</span>
+          </div>
+          <div class="countdown__unit">
+            <span class="countdown__num" data-unit="seconds">0</span>
+            <span class="countdown__label">Segundos</span>
+          </div>
+        </div>
+        <p class="countdown__finished" hidden>¡El gran día llegó!</p>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-rsvp">
+    <section class="section section--rsvp" data-section="rsvp" aria-labelledby="rsvp-title">
+      <div class="section__inner">
+        <h2 class="section__title" id="rsvp-title" data-field="title"></h2>
+        <p class="section__subtitle" data-field="subtitle"></p>
+        <a class="btn btn--primary" data-field="rsvp_link"
+           target="_blank" rel="noopener noreferrer">
+          <span data-field="button_text"></span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+            <path fill="none" stroke="currentColor" stroke-width="2"
+                  d="M5 12h14M13 6l6 6-6 6"/>
+          </svg>
+        </a>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-calendar">
+    <section class="section section--calendar" data-section="calendar" aria-labelledby="calendar-title">
+      <div class="section__inner">
+        <h2 class="section__title" id="calendar-title" data-field="title"></h2>
+        <p class="section__subtitle" data-field="subtitle"></p>
+        <div class="calendar__buttons">
+          <button class="btn btn--secondary" type="button" data-action="add-google">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+              <path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/>
+            </svg>
+            <span data-field="button_text"></span>
+          </button>
+          <a class="btn btn--ghost" href="#" data-action="add-ical" download="evento.ics">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+              <path fill="currentColor" d="M5 20h14v-2H5v2zm7-18L5.33 8.67 6.74 10.08 11 5.83V17h2V5.83l4.25 4.25 1.42-1.41L12 2z" transform="rotate(180 12 11)"/>
+            </svg>
+            Descargar .ics
+          </a>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-gallery">
+    <section class="section section--gallery" data-section="gallery" aria-labelledby="gallery-title">
+      <div class="section__inner">
+        <h2 class="section__title" id="gallery-title" data-field="title"></h2>
+        <p class="section__subtitle" data-field="subtitle"></p>
+        <div class="gallery" data-field="gallery-grid"></div>
+      </div>
+    </section>
+  </template>
+
+  <!-- ===== Lightbox para galería ===== -->
+  <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Visor de imagen">
+    <button class="lightbox__close" type="button" aria-label="Cerrar visor">×</button>
+    <button class="lightbox__nav lightbox__nav--prev" type="button" aria-label="Imagen anterior">‹</button>
+    <figure class="lightbox__figure">
+      <img class="lightbox__img" alt="" />
+      <figcaption class="lightbox__caption"></figcaption>
+    </figure>
+    <button class="lightbox__nav lightbox__nav--next" type="button" aria-label="Imagen siguiente">›</button>
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Config (URL + anon key) -->
+  <script src="./js/config.js"></script>
+  <!-- App principal -->
+  <script src="./js/app.js" type="module"></script>
+</body>
+</html>

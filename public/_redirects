@@ -1,0 +1,3 @@
+# Cloudflare Pages redirects
+# Permite URLs amigables tipo /i/slug → mismo index.html
+/i/*  /index.html  200
