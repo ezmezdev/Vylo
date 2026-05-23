@@ -81,6 +81,19 @@ $('#logout-btn').addEventListener('click', async () => {
   $('#admin-view').hidden = true;
 });
 
+// Mostrar / ocultar contraseña
+$('#toggle-password').addEventListener('click', () => {
+  const input = $('#password-input');
+  const btn = $('#toggle-password');
+  const showing = input.type === 'text';
+
+  input.type = showing ? 'password' : 'text';
+  btn.setAttribute('aria-pressed', String(!showing));
+  btn.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+  btn.querySelector('.icon-eye').hidden = !showing;
+  btn.querySelector('.icon-eye-off').hidden = showing;
+});
+
 function showAdmin() {
   $('#auth-view').hidden = true;
   $('#admin-view').hidden = false;

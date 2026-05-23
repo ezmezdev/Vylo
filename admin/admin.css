@@ -94,6 +94,33 @@ input[type="color"] {
 }
 textarea { resize: vertical; min-height: 80px; }
 
+/* ===== Campo de contraseña con toggle ===== */
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-field input {
+  padding-right: 2.75rem;  /* espacio para el botón */
+}
+.password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 0.375rem;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+.password-toggle:hover { color: var(--text); background: var(--bg); }
+.password-toggle:focus-visible { color: var(--accent); }
+
 /* ===== Topbar ===== */
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
