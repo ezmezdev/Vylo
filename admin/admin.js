@@ -125,7 +125,7 @@ function showAdmin() {
 // LISTA DE INVITACIONES
 // ============================================================
 async function loadInvitations() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('invitations')
     .select('id, slug, event_title, host_names, event_date, is_published')
     .order('created_at', { ascending: false });
@@ -170,7 +170,7 @@ $('#new-invitation-btn').addEventListener('click', async () => {
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
     toast('Slug inválido', 'error'); return;
   }
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('invitations')
     .insert({
       slug,
