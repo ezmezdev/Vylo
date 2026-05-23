@@ -28,6 +28,9 @@ body {
   line-height: 1.5;
 }
 
+/* Garantizar que [hidden] siempre oculte, sin importar display del elemento */
+[hidden] { display: none !important; }
+
 h1, h2, h3 { margin: 0; font-weight: 600; }
 input, select, textarea, button { font: inherit; }
 

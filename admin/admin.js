@@ -62,14 +62,34 @@ function localToIso(local) {
 // ============================================================
 // AUTH
 // ============================================================
+function showLogin() {
+  console.log('[Admin] Mostrando login');
+  document.getElementById('auth-view').removeAttribute('hidden');
+  document.getElementById('admin-view').setAttribute('hidden', '');
+}
+
+function showAdmin() {
+  console.log('[Admin] Mostrando panel...');
+  document.getElementById('auth-view').setAttribute('hidden', '');
+  document.getElementById('admin-view').removeAttribute('hidden');
+  document.getElementById('user-email').textContent = state.user.email;
+  loadInvitations();
+}
+
 async function checkAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    state.user = session.user;
-    showAdmin();
-  } else {
-    $('#auth-view').hidden = false;
-    $('#admin-view').hidden = true;
+  console.log('[Admin] Verificando sesión...');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    console.log('[Admin] Sesión:', session ? 'activa' : 'ninguna');
+    if (session) {
+      state.user = session.user;
+      showAdmin();
+    } else {
+      showLogin();
+    }
+  } catch(e) {
+    console.error('[Admin] Error en checkAuth:', e);
+    showLogin();
   }
 }
 
@@ -97,8 +117,7 @@ $('#login-form').addEventListener('submit', async e => {
 $('#logout-btn').addEventListener('click', async () => {
   await sb.auth.signOut();
   state.user = null;
-  $('#auth-view').hidden = false;
-  $('#admin-view').hidden = true;
+  showLogin();
 });
 
 // Mostrar / ocultar contraseña
