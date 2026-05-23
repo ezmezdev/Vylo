@@ -197,10 +197,21 @@ function escapeHtml(s) {
 // CREAR / SELECCIONAR INVITACIÓN
 // ============================================================
 $('#new-invitation-btn').addEventListener('click', async () => {
-  const slug = prompt('Slug para la nueva invitación (ej: boda-ana-luis):');
-  if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
-    toast('Slug inválido', 'error'); return;
+  const raw = prompt('Slug para la nueva invitación (ej: boda-ana-luis):');
+  if (raw === null) return; // canceló
+
+  // Limpiar automáticamente: minúsculas, reemplazar espacios y caracteres inválidos por guión
+  const slug = raw.trim().toLowerCase()
+    .replace(/\s+/g, '-')           // espacios → guión
+    .replace(/[^a-z0-9-]/g, '-')   // caracteres inválidos → guión
+    .replace(/-+/g, '-')            // guiones múltiples → uno solo
+    .replace(/^-|-$/g, '');         // quitar guiones al inicio/fin
+
+  if (!slug) {
+    toast('El slug no puede estar vacío', 'error'); return;
   }
+
+  console.log('[Admin] Creando invitación con slug:', slug);
   const { data, error } = await sb
     .from('invitations')
     .insert({
