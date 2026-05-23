@@ -2,8 +2,19 @@
 // ADMIN PANEL · LÓGICA
 // ============================================================
 
+console.log('[Admin] Script cargando...');
+
+if (!window.APP_CONFIG) {
+  console.error('[Admin] ERROR: config.js no cargó. APP_CONFIG no definido.');
+}
+if (!window.supabase) {
+  console.error('[Admin] ERROR: supabase-js no cargó.');
+}
+
 const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET } = window.APP_CONFIG;
+console.log('[Admin] Conectando a Supabase:', SUPABASE_URL);
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('[Admin] Cliente Supabase creado OK');
 
 // Estado global
 const state = {
@@ -62,15 +73,21 @@ async function checkAuth() {
 $('#login-form').addEventListener('submit', async e => {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: fd.get('email'),
-    password: fd.get('password')
-  });
+  const email = fd.get('email');
+  const password = fd.get('password');
+  console.log('[Admin] Intentando login con:', email);
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  console.log('[Admin] Respuesta login:', { data, error });
+
   if (error) {
-    $('#auth-error').textContent = error.message;
+    console.error('[Admin] Error de login:', error.message, error);
+    $('#auth-error').textContent = `Error: ${error.message}`;
     return;
   }
   state.user = data.user;
+  console.log('[Admin] Login exitoso:', state.user.email);
   showAdmin();
 });
 
