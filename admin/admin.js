@@ -523,20 +523,78 @@ function openSectionModal(section) {
   fieldsEl.innerHTML = '';
   contentFieldsFor(section.section_type).forEach(field => {
     const label = document.createElement('label');
-    label.className = field.full ? 'full' : '';
-    label.innerHTML = `
-      <span>${field.label}</span>
-      ${field.type === 'textarea'
-        ? `<textarea name="content_${field.key}" rows="2">${escapeHtml(section.content?.[field.key] || '')}</textarea>`
-        : `<input type="${field.type || 'text'}" name="content_${field.key}"
-                  value="${escapeHtml(section.content?.[field.key] ?? '')}"
-                  ${field.min != null ? `min="${field.min}"` : ''}
-                  ${field.max != null ? `max="${field.max}"` : ''} />`
-      }
-      ${field.help ? `<small>${field.help}</small>` : ''}
-    `;
+    label.className = field.type === 'checkbox' ? 'checkbox full' : (field.full ? 'full' : '');
+
+    if (field.type === 'checkbox') {
+      const checked = section.content?.[field.key] === true || section.content?.[field.key] === 'true';
+      label.innerHTML = `
+        <input type="checkbox" name="content_${field.key}" ${checked ? 'checked' : ''} />
+        <span>${field.label}</span>
+      `;
+    } else if (field.type === 'textarea') {
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <textarea name="content_${field.key}" rows="2">${escapeHtml(section.content?.[field.key] || '')}</textarea>
+        ${field.help ? `<small>${field.help}</small>` : ''}
+      `;
+    } else if (field.type === 'select') {
+      const opts = field.options.map(o =>
+        `<option value="${o.value}" ${section.content?.[field.key] === o.value ? 'selected' : ''}>${o.label}</option>`
+      ).join('');
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <select name="content_${field.key}">${opts}</select>
+      `;
+    } else {
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <input type="${field.type || 'text'}" name="content_${field.key}"
+               value="${escapeHtml(section.content?.[field.key] ?? '')}"
+               ${field.min != null ? `min="${field.min}"` : ''}
+               ${field.max != null ? `max="${field.max}"` : ''} />
+        ${field.help ? `<small>${field.help}</small>` : ''}
+      `;
+    }
     fieldsEl.appendChild(label);
   });
+
+  // Preview imagen de fondo actual
+  const bgCurrent = $('#section-bg-current');
+  const bgPreview = $('#section-bg-preview');
+  const overlayInput = modal.querySelector('[name="bg_overlay"]');
+  const overlayValue = $('#bg-overlay-value');
+  const minHeightInput = modal.querySelector('[name="min_height"]');
+
+  minHeightInput.value = section.min_height || '';
+  overlayInput.value = section.bg_overlay ?? 0;
+  overlayValue.textContent = overlayInput.value;
+  overlayInput.addEventListener('input', () => { overlayValue.textContent = overlayInput.value; });
+
+  if (section.bg_image_url) {
+    bgPreview.src = storageUrl(section.bg_image_url);
+    bgPreview.hidden = false;
+    bgCurrent.textContent = 'Imagen actual guardada';
+  } else {
+    bgPreview.hidden = true;
+    bgCurrent.textContent = '';
+  }
+
+  // Preview al seleccionar nueva imagen
+  modal.querySelector('[name="section_bg_image"]').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { bgPreview.src = ev.target.result; bgPreview.hidden = false; };
+    reader.readAsDataURL(file);
+  });
+
+  $('#clear-section-bg').addEventListener('click', () => {
+    modal.querySelector('[name="section_bg_image"]').value = '';
+    bgPreview.hidden = true;
+    bgCurrent.textContent = '(se quitará al guardar)';
+    modal._clearBg = true;
+  });
+  modal._clearBg = false;
 
   modal.showModal();
 }
@@ -557,10 +615,23 @@ function contentFieldsFor(type) {
     rsvp: [...common, { key: 'button_text', label: 'Texto del botón' }],
     calendar: [
       ...common,
-      { key: 'button_text', label: 'Texto del botón' },
-      { key: 'duration_hours', label: 'Duración (horas)', type: 'number', min: 1, max: 24 }
+      { key: 'button_text', label: 'Texto del botón Google' },
+      { key: 'duration_hours', label: 'Duración (horas)', type: 'number', min: 1, max: 24 },
+      { key: 'show_ics', label: 'Mostrar botón "Descargar .ics"', type: 'checkbox' }
     ],
-    gallery: common
+    gallery: [
+      ...common,
+      { key: 'layout', label: 'Diseño de la galería', type: 'select',
+        options: [
+          { value: 'masonry', label: 'Mosaico (masonry)' },
+          { value: 'grid', label: 'Cuadrícula uniforme' },
+          { value: 'stack', label: 'Una debajo de la otra' },
+          { value: 'horizontal', label: 'Tira horizontal (scroll)' },
+          { value: 'featured', label: 'Destacada + miniaturas' },
+        ],
+        full: true
+      }
+    ]
   })[type] || [];
 }
 
@@ -587,13 +658,19 @@ $('#section-modal form').addEventListener('submit', async e => {
   for (const [key, value] of fd.entries()) {
     if (key.startsWith('content_')) {
       const k = key.replace('content_', '');
-      content[k] = isNaN(value) || value === '' ? value : Number(value);
-      // mantener strings como strings cuando deberían serlo
       if (['title','subtitle','eyebrow','quote','button_text'].includes(k)) {
         content[k] = value;
+      } else {
+        content[k] = isNaN(value) || value === '' ? value : Number(value);
       }
     }
   }
+  // Checkboxes no aparecen en FormData si no están marcados — los procesamos aparte
+  const checkboxFields = ['show_ics'];
+  checkboxFields.forEach(k => {
+    const el = f.querySelector(`[name="content_${k}"]`);
+    if (el) content[k] = el.checked;
+  });
 
   const update = {
     is_enabled: f.is_enabled.checked,
@@ -603,11 +680,24 @@ $('#section-modal form').addEventListener('submit', async e => {
     body_font: f.body_font.value || null,
     font_size: f.font_size.value ? Number(f.font_size.value) : null,
     padding_y: f.padding_y.value ? Number(f.padding_y.value) : 80,
+    min_height: f.min_height.value ? Number(f.min_height.value) : null,
+    bg_overlay: Number(f.bg_overlay.value) || 0,
     content
   };
 
-  // Si los colores son '#000000' por default y no se tocaron, mejor limpiarlos
-  // (en este caso simple los enviamos tal cual; el usuario puede usar "Limpiar")
+  // Quitar imagen de fondo
+  if (modal._clearBg) update.bg_image_url = null;
+
+  // Subir nueva imagen de fondo si se seleccionó
+  const bgFile = fd.get('section_bg_image');
+  if (bgFile && bgFile.size > 0) {
+    const ext = bgFile.name.split('.').pop().toLowerCase();
+    const path = `${state.currentInvitation.id}/sections/${section.id}-bg.${ext}`;
+    const { error: upErr } = await sb.storage
+      .from(STORAGE_BUCKET).upload(path, bgFile, { upsert: true });
+    if (upErr) { toast('Error subiendo imagen: ' + upErr.message, 'error'); return; }
+    update.bg_image_url = path;
+  }
 
   const { error } = await sb.from('sections')
     .update(update).eq('id', section.id);
@@ -625,30 +715,49 @@ $('#section-modal form').addEventListener('submit', async e => {
 function renderGalleryList() {
   const ul = $('#gallery-list');
   ul.innerHTML = '';
+
+  if (!state.currentGallery.length) {
+    ul.innerHTML = '<li style="grid-column:1/-1;color:var(--muted);font-style:italic;padding:1rem 0;">No hay imágenes aún. Subí algunas con el botón de arriba.</li>';
+    return;
+  }
+
   state.currentGallery.forEach(img => {
     const li = document.createElement('li');
     li.className = 'gallery-img-item';
+    li.dataset.id = img.id;
+
+    const imgUrl = storageUrl(img.image_url);
     li.innerHTML = `
-      <img src="${storageUrl(img.image_url)}" alt="${escapeHtml(img.alt_text)}" />
-      <button type="button" class="gallery-img-item__remove" aria-label="Eliminar imagen">×</button>
+      <img src="${imgUrl}" alt="${escapeHtml(img.alt_text)}"
+           onerror="this.style.background='#eee';this.style.minHeight='120px'" />
+      <button type="button" class="gallery-img-item__remove" aria-label="Eliminar imagen" title="Eliminar">×</button>
       <div class="gallery-img-item__body">
-        <input type="text" data-field="alt_text" placeholder="Texto alternativo (obligatorio)"
-               value="${escapeHtml(img.alt_text)}" required />
-        <input type="text" data-field="caption" placeholder="Pie de foto (opcional)"
+        <input type="text" data-field="alt_text"
+               placeholder="Texto alternativo (obligatorio)"
+               value="${escapeHtml(img.alt_text)}" />
+        <input type="text" data-field="caption"
+               placeholder="Pie de foto (opcional)"
                value="${escapeHtml(img.caption || '')}" />
+        <button type="button" class="btn btn--ghost btn--sm save-caption-btn">Guardar</button>
       </div>
     `;
-    li.querySelector('.gallery-img-item__remove').addEventListener('click', () => removeGalleryImage(img));
 
-    // Auto-guardar al cambiar
-    li.querySelectorAll('input').forEach(input => {
-      input.addEventListener('blur', async () => {
-        const field = input.dataset.field;
-        await sb.from('gallery_images')
-          .update({ [field]: input.value }).eq('id', img.id);
-        img[field] = input.value;
-      });
+    // Guardar alt y caption
+    li.querySelector('.save-caption-btn').addEventListener('click', async () => {
+      const alt = li.querySelector('[data-field="alt_text"]').value.trim();
+      const caption = li.querySelector('[data-field="caption"]').value.trim();
+      if (!alt) { toast('El texto alternativo es obligatorio', 'error'); return; }
+      const { error } = await sb.from('gallery_images')
+        .update({ alt_text: alt, caption: caption || null })
+        .eq('id', img.id);
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+      img.alt_text = alt;
+      img.caption = caption;
+      toast('Imagen actualizada');
     });
+
+    // Eliminar
+    li.querySelector('.gallery-img-item__remove').addEventListener('click', () => removeGalleryImage(img, li));
 
     ul.appendChild(li);
   });
@@ -658,34 +767,83 @@ $('#gallery-upload-input').addEventListener('change', async e => {
   const files = [...e.target.files];
   if (!files.length) return;
 
+  const btn = e.target.closest('label');
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+
+  let subidas = 0;
   for (const file of files) {
-    const ext = file.name.split('.').pop();
+    // Validar tipo y tamaño (max 5MB)
+    if (!file.type.startsWith('image/')) {
+      toast(`${file.name} no es una imagen válida`, 'error');
+      continue;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast(`${file.name} supera los 5MB`, 'error');
+      continue;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
     const path = `${state.currentInvitation.id}/gallery/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+    console.log('[Gallery] Subiendo:', path);
     const { error: upErr } = await sb.storage
-      .from(STORAGE_BUCKET).upload(path, file);
-    if (upErr) { toast(upErr.message, 'error'); continue; }
+      .from(STORAGE_BUCKET)
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+
+    if (upErr) {
+      console.error('[Gallery] Error upload:', upErr);
+      toast(`Error subiendo ${file.name}: ${upErr.message}`, 'error');
+      continue;
+    }
 
     const { data, error } = await sb.from('gallery_images').insert({
       invitation_id: state.currentInvitation.id,
       image_url: path,
-      alt_text: 'Foto del evento',
+      alt_text: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+      caption: null,
       position: state.currentGallery.length
     }).select().single();
-    if (error) { toast(error.message, 'error'); continue; }
+
+    if (error) {
+      console.error('[Gallery] Error DB:', error);
+      toast(`Error guardando ${file.name}: ${error.message}`, 'error');
+      continue;
+    }
+
     state.currentGallery.push(data);
+    subidas++;
   }
-  renderGalleryList();
+
+  btn.style.opacity = '';
+  btn.style.pointerEvents = '';
   e.target.value = '';
-  toast(`${files.length} imagen(es) subida(s)`);
+  renderGalleryList();
+
+  if (subidas > 0) toast(`${subidas} imagen${subidas > 1 ? 'es' : ''} subida${subidas > 1 ? 's' : ''} ✓`);
 });
 
-async function removeGalleryImage(img) {
-  if (!confirm('¿Eliminar esta imagen?')) return;
-  // Eliminar de storage si la ruta es relativa
+async function removeGalleryImage(img, liEl) {
+  if (!confirm(`¿Eliminar esta imagen?\nEsta acción no se puede deshacer.`)) return;
+
+  // Deshabilitar el botón visualmente
+  if (liEl) liEl.style.opacity = '0.4';
+
+  // 1. Eliminar del storage
   if (img.image_url && !img.image_url.startsWith('http')) {
-    await sb.storage.from(STORAGE_BUCKET).remove([img.image_url]);
+    const { error: storageErr } = await sb.storage
+      .from(STORAGE_BUCKET).remove([img.image_url]);
+    if (storageErr) console.warn('[Gallery] Error borrando storage:', storageErr);
   }
-  await sb.from('gallery_images').delete().eq('id', img.id);
+
+  // 2. Eliminar de la BD
+  const { error } = await sb.from('gallery_images').delete().eq('id', img.id);
+  if (error) {
+    toast('Error al eliminar: ' + error.message, 'error');
+    if (liEl) liEl.style.opacity = '';
+    return;
+  }
+
   state.currentGallery = state.currentGallery.filter(g => g.id !== img.id);
   renderGalleryList();
   toast('Imagen eliminada');
