@@ -266,6 +266,8 @@ function applyMotionEffect(el, effect) {
     el.style.opacity = '0';
   }
 }
+
+function renderHero(el, inv, content) {
   el.querySelector('[data-field="event_type"]').textContent =
     content.eyebrow || inv.event_type.replace(/_/g, ' ');
   el.querySelector('[data-field="host_names"]').textContent = inv.host_names;
@@ -548,6 +550,35 @@ function renderSections({ invitation, sections, gallery }) {
 
 // ---- Inicio ----
 
+// SEGURO ANTI-LOADER: si en 10 segundos no cargó, mostrar error
+const loaderTimeout = setTimeout(() => {
+  const loader = document.getElementById('loader');
+  const errorState = document.getElementById('error-state');
+  if (loader && !loader.hidden) {
+    console.error('[Landing] Timeout: el loader tardó más de 10s. Mostrando error.');
+    loader.hidden = true;
+    if (errorState) errorState.hidden = false;
+  }
+}, 10000);
+
+function hideLoader() {
+  clearTimeout(loaderTimeout);
+  const loader = document.getElementById('loader');
+  if (loader) loader.hidden = true;
+}
+
+function showError() {
+  hideLoader();
+  const errorState = document.getElementById('error-state');
+  if (errorState) errorState.hidden = false;
+}
+
+function showMain() {
+  hideLoader();
+  const main = document.getElementById('main');
+  if (main) main.hidden = false;
+}
+
 async function init() {
   console.log('[Landing] Iniciando...');
   try {
@@ -557,8 +588,7 @@ async function init() {
 
     if (!data) {
       console.log('[Landing] No se encontró la invitación o no está publicada');
-      document.getElementById('loader').hidden = true;
-      document.getElementById('error-state').hidden = false;
+      showError();
       return;
     }
 
@@ -568,18 +598,25 @@ async function init() {
     console.log('[Landing] Renderizando secciones:', data.sections.length);
     renderSections(data);
 
-    console.log('[Landing] Mostrando página');
-    document.getElementById('loader').hidden = true;
-    document.getElementById('main').hidden = false;
     console.log('[Landing] ¡Listo!');
+    showMain();
 
   } catch(err) {
-    console.error('[Landing] Error en init:', err);
+    console.error('[Landing] Error en init:', err.message);
     console.error('[Landing] Stack:', err.stack);
-    document.getElementById('loader').hidden = true;
-    document.getElementById('error-state').hidden = false;
+    showError();
   }
 }
+
+// Captura global de errores no manejados
+window.addEventListener('error', (e) => {
+  console.error('[Landing] Error global:', e.message, e.filename, e.lineno);
+  showError();
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[Landing] Promise rechazada:', e.reason);
+  showError();
+});
 
 init();
 
