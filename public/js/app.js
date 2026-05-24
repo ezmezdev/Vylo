@@ -284,8 +284,17 @@ function applyMotionEffect(el, effect) {
 }
 
 function renderHero(el, inv, content) {
-  el.querySelector('[data-field="event_type"]').textContent =
-    content.eyebrow || inv.event_type.replace(/_/g, ' ');
+  const eyebrowEl = el.querySelector('[data-field="event_type"]');
+  // Solo mostrar eyebrow si hay contenido explícito — si está vacío, ocultar
+  if (content.eyebrow) {
+    eyebrowEl.textContent = content.eyebrow;
+  } else if (content.eyebrow === undefined && inv.event_type) {
+    // Primera vez sin configurar: mostrar tipo de evento como default
+    eyebrowEl.textContent = inv.event_type.replace(/_/g, ' ');
+  } else {
+    // Vacío explícito: ocultar el elemento
+    eyebrowEl.hidden = true;
+  }
   el.querySelector('[data-field="host_names"]').textContent = inv.host_names;
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
   el.querySelector('[data-field="event_date"]').textContent = formatDate(inv.event_date);
