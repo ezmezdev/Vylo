@@ -198,6 +198,39 @@
     </section>
   </template>
 
+  <template id="tpl-info">
+    <section class="section section--info" data-section="info" aria-labelledby="info-title">
+      <div class="section__inner">
+        <h2 class="section__title" id="info-title" data-field="title" hidden></h2>
+        <p class="section__subtitle" data-field="subtitle" hidden></p>
+        <div class="info__columns" data-field="columns"></div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-gift">
+    <section class="section section--gift" data-section="gift" aria-labelledby="gift-title">
+      <div class="section__inner">
+        <h2 class="section__title" id="gift-title" data-field="title"></h2>
+        <p class="section__subtitle" data-field="subtitle"></p>
+        <div class="gift__columns" data-field="gift-columns"></div>
+      </div>
+    </section>
+  </template>
+
+  <!-- Modal de alias copiado -->
+  <div id="alias-modal" class="alias-modal" hidden role="dialog" aria-modal="true" aria-labelledby="alias-modal-title">
+    <div class="alias-modal__box">
+      <div class="alias-modal__icon">✓</div>
+      <h3 id="alias-modal-title" class="alias-modal__title">¡Alias copiado!</h3>
+      <p class="alias-modal__text">Tu alias fue copiado al portapapeles.</p>
+      <p class="alias-modal__redirect" hidden>
+        Siendo dirigido a <strong>Mercado Pago</strong> en <span class="alias-modal__count">3</span>...
+      </p>
+      <button type="button" class="btn btn--ghost alias-modal__cancel">Cancelar</button>
+    </div>
+  </div>
+
   <!-- ===== Lightbox para galería ===== -->
   <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Visor de imagen">
     <button class="lightbox__close" type="button" aria-label="Cerrar visor">×</button>
