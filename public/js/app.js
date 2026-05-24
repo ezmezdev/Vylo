@@ -126,12 +126,16 @@ function renderHero(el, inv, content) {
   el.querySelector('[data-field="event_date"]').textContent = formatDate(inv.event_date);
   el.querySelector('[data-field="quote"]').textContent = content.quote || '';
 
-  const img = el.querySelector('[data-field="hero_image"]');
+  // Imagen como fondo fullscreen
+  const bgImg = el.querySelector('[data-field="hero_image_bg"]');
   if (inv.hero_image_url) {
-    img.src = storageUrl(inv.hero_image_url);
-    img.alt = `Foto de ${inv.host_names}`;
+    bgImg.src = storageUrl(inv.hero_image_url);
+    bgImg.alt = `Foto de ${inv.host_names}`;
   } else {
-    el.querySelector('.hero__photo').hidden = true;
+    // Sin foto: fondo con gradiente usando colores del tema
+    el.querySelector('.hero__bg-img').style.display = 'none';
+    el.querySelector('.hero__overlay').style.background =
+      `linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 70%, var(--color-accent)) 100%)`;
   }
 }
 
