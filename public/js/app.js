@@ -546,6 +546,137 @@ function renderLocation(el, inv, content) {
   }
 }
 
+function renderInfo(el, inv, content) {
+  const titleEl = el.querySelector('[data-field="title"]');
+  const subtitleEl = el.querySelector('[data-field="subtitle"]');
+  if (content.title) { titleEl.textContent = content.title; titleEl.hidden = false; }
+  if (content.subtitle) { subtitleEl.textContent = content.subtitle; subtitleEl.hidden = false; }
+
+  const cols = el.querySelector('[data-field="columns"]');
+  const items = content.columns || [];
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'info__col';
+    div.innerHTML = `
+      ${item.icon ? `<div class="info__icon" aria-hidden="true">${item.icon}</div>` : ''}
+      ${item.label ? `<p class="info__col-label">${item.label}</p>` : ''}
+      ${item.title ? `<p class="info__col-title">${item.title}</p>` : ''}
+      ${item.text  ? `<p class="info__col-text">${item.text}</p>` : ''}
+    `;
+    cols.appendChild(div);
+  });
+}
+
+function renderGift(el, inv, content) {
+  el.querySelector('[data-field="title"]').textContent = content.title || 'Regalo';
+  el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
+
+  const cols = el.querySelector('[data-field="gift-columns"]');
+  const items = content.columns || [];
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'gift__col';
+
+    let inner = `
+      ${item.icon  ? `<div class="gift__icon" aria-hidden="true">${item.icon}</div>` : ''}
+      ${item.label ? `<p class="gift__label">${item.label}</p>` : ''}
+      ${item.title ? `<p class="gift__col-title">${item.title}</p>` : ''}
+      ${item.text  ? `<p class="gift__col-text">${item.text}</p>` : ''}
+    `;
+
+    // Alias con botón copiar
+    if (item.alias) {
+      inner += `
+        <div class="gift__alias-wrap" role="button" tabindex="0" aria-label="Copiar alias ${item.alias}">
+          <span class="gift__alias">${item.alias}</span>
+          <button type="button" class="gift__copy-btn" aria-label="Copiar">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    }
+
+    div.innerHTML = inner;
+
+    // Handler de copia del alias
+    if (item.alias) {
+      const aliasWrap = div.querySelector('.gift__alias-wrap');
+      aliasWrap.addEventListener('click', () => triggerAliasCopy(item.alias, item.mp_redirect, item.mp_alias));
+      aliasWrap.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') triggerAliasCopy(item.alias, item.mp_redirect, item.mp_alias);
+      });
+    }
+
+    cols.appendChild(div);
+  });
+}
+
+// Modal de alias copiado
+let aliasModalTimer = null;
+
+function triggerAliasCopy(alias, mpRedirect, mpAlias) {
+  // Copiar al portapapeles
+  navigator.clipboard?.writeText(alias).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = alias; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  });
+
+  const modal = document.getElementById('alias-modal');
+  const redirectEl = modal.querySelector('.alias-modal__redirect');
+  const countEl = modal.querySelector('.alias-modal__count');
+  const cancelBtn = modal.querySelector('.alias-modal__cancel');
+  const textEl = modal.querySelector('.alias-modal__text');
+
+  textEl.textContent = `El alias "${alias}" fue copiado al portapapeles.`;
+
+  if (mpRedirect) {
+    redirectEl.hidden = false;
+    let count = 3;
+    countEl.textContent = count;
+    if (aliasModalTimer) clearInterval(aliasModalTimer);
+    aliasModalTimer = setInterval(() => {
+      count--;
+      countEl.textContent = count;
+      if (count <= 0) {
+        clearInterval(aliasModalTimer);
+        closeAliasModal();
+        // Abrir Mercado Pago
+        const mpUrl = mpAlias
+          ? `https://mpago.la/pay/${encodeURIComponent(mpAlias)}`
+          : 'https://www.mercadopago.com.ar/';
+        // Mobile: intenta abrir la app, fallback a web
+        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = `mercadopago://pay?alias=${encodeURIComponent(mpAlias || alias)}`;
+          setTimeout(() => window.open(mpUrl, '_blank'), 1500);
+        } else {
+          window.open(mpUrl, '_blank', 'noopener');
+        }
+      }
+    }, 1000);
+  } else {
+    redirectEl.hidden = true;
+    if (aliasModalTimer) clearInterval(aliasModalTimer);
+  }
+
+  modal.hidden = false;
+  document.body.style.overflow = 'hidden';
+
+  cancelBtn.onclick = closeAliasModal;
+  modal.addEventListener('click', e => { if (e.target === modal) closeAliasModal(); }, { once: true });
+}
+
+function closeAliasModal() {
+  if (aliasModalTimer) { clearInterval(aliasModalTimer); aliasModalTimer = null; }
+  document.getElementById('alias-modal').hidden = true;
+  document.body.style.overflow = '';
+}
+
 const RENDERERS = {
   hero: renderHero,
   countdown: renderCountdown,
@@ -553,6 +684,8 @@ const RENDERERS = {
   calendar: renderCalendar,
   gallery: renderGallery,
   location: renderLocation,
+  info: renderInfo,
+  gift: renderGift,
 };
 
 function renderSections({ invitation, sections, gallery }) {
