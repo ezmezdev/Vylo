@@ -19,6 +19,15 @@ console.log('[Admin] Cliente Supabase creado OK');
 document.addEventListener('DOMContentLoaded', function() {
 console.log('[Admin] DOM listo, iniciando...');
 
+// Inicializar modo oscuro
+initDarkMode();
+
+// Toggle modo oscuro
+document.getElementById('dark-mode-btn').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  applyThemeMode(current === 'dark' ? 'light' : 'dark');
+});
+
 // Estado global
 const state = {
   user: null,
@@ -60,8 +69,38 @@ function localToIso(local) {
 }
 
 // ============================================================
-// AUTH
+// MODO OSCURO — persiste en localStorage
 // ============================================================
+function initDarkMode() {
+  const saved = localStorage.getItem('vylo-theme') || 'light';
+  applyThemeMode(saved);
+}
+
+function applyThemeMode(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('vylo-theme', mode);
+  const btn = document.getElementById('dark-mode-btn');
+  const sun = document.getElementById('icon-sun');
+  const moon = document.getElementById('icon-moon');
+  if (!btn) return;
+  if (mode === 'dark') {
+    btn.setAttribute('aria-label', 'Cambiar a modo claro');
+    btn.title = 'Modo claro';
+    sun.hidden = false;
+    moon.hidden = true;
+  } else {
+    btn.setAttribute('aria-label', 'Cambiar a modo oscuro');
+    btn.title = 'Modo oscuro';
+    sun.hidden = true;
+    moon.hidden = false;
+  }
+}
+
+// Aplicar antes de que el DOM esté listo para evitar flash
+(function() {
+  const saved = localStorage.getItem('vylo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
 function showLogin() {
   console.log('[Admin] Mostrando login');
   document.getElementById('auth-view').removeAttribute('hidden');

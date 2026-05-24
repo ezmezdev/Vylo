@@ -1,21 +1,24 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Panel · Invitaciones</title>
+  <title>Vylo · Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Pinyon+Script&display=swap" />
   <link rel="stylesheet" href="./admin.css" />
 </head>
 <body>
   <!-- ===== Login ===== -->
   <section id="auth-view" class="auth">
     <form id="login-form" class="auth__form" aria-labelledby="auth-title">
-      <h1 id="auth-title">Panel de Invitaciones</h1>
+      <div class="auth__logo" aria-hidden="true">
+        <span class="vylo-logo">Vylo</span>
+      </div>
+      <h1 id="auth-title">Panel de administración</h1>
       <p class="auth__subtitle">Iniciá sesión para administrar las invitaciones</p>
       <label>
         <span>Email</span>
@@ -47,10 +50,26 @@
   <!-- ===== Panel ===== -->
   <div id="admin-view" hidden>
     <header class="topbar">
-      <h1 class="topbar__brand">Invitaciones</h1>
+      <div class="topbar__brand">
+        <span class="vylo-logo" aria-label="Vylo">Vylo</span>
+        <span class="topbar__tagline">Invitaciones</span>
+      </div>
       <div class="topbar__actions">
         <span id="user-email" class="topbar__user"></span>
-        <button id="logout-btn" class="btn btn--ghost btn--sm">Salir</button>
+        <button id="dark-mode-btn" class="btn btn--ghost btn--sm btn--icon" type="button"
+                aria-label="Cambiar a modo oscuro" title="Modo oscuro">
+          <svg id="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" hidden>
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <button id="logout-btn" class="btn btn--ghost btn--sm" type="button">Salir</button>
       </div>
     </header>
 

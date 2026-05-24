@@ -1,8 +1,8 @@
 /* ============================================================
-   ADMIN PANEL
-   Estética sobria, utilitaria; UI tipo dashboard.
+   ADMIN PANEL — Vylo
    ============================================================ */
 
+/* ── Variables modo claro (default) ── */
 :root {
   --bg: #f7f7f8;
   --surface: #ffffff;
@@ -16,7 +16,53 @@
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-lg: 0 10px 30px rgba(0,0,0,0.08);
+  --topbar-bg: #ffffff;
+  --input-bg: #ffffff;
 }
+
+/* ── Variables modo oscuro ── */
+[data-theme="dark"] {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --border: #2d3142;
+  --text: #e8eaf0;
+  --muted: #8b93a8;
+  --primary: #e8eaf0;
+  --accent: #818cf8;
+  --success: #34d399;
+  --danger: #f87171;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.4);
+  --topbar-bg: #13151f;
+  --input-bg: #1e2130;
+}
+
+/* Transición suave al cambiar tema */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
+}
+/* Excepto elementos que no deben transicionar */
+input[type="range"], input[type="color"], .gallery__item img, .hero__bg-img img {
+  transition: none;
+}
+
+/* ── Logo Vylo ── */
+.vylo-logo {
+  font-family: 'Pinyon Script', 'Great Vibes', cursive;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: 0.01em;
+  display: inline-block;
+}
+[data-theme="dark"] .vylo-logo { color: #e8eaf0; }
+
+/* Logo en login más grande */
+.auth__logo {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.auth__logo .vylo-logo { font-size: 3.5rem; }
 
 * { box-sizing: border-box; }
 body {
@@ -86,7 +132,7 @@ select, textarea {
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--input-bg);
   width: 100%;
   color: var(--text);
 }
@@ -135,13 +181,32 @@ textarea { resize: vertical; min-height: 80px; }
 /* ===== Topbar ===== */
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background: var(--surface);
+  padding: 0.75rem 1.5rem;
+  background: var(--topbar-bg);
   border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
 }
-.topbar__brand { font-size: 1.125rem; }
-.topbar__actions { display: flex; align-items: center; gap: 1rem; }
+.topbar__brand {
+  display: flex; align-items: baseline; gap: 0.5rem;
+}
+.topbar__tagline {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  font-weight: 500;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+}
+.topbar__actions { display: flex; align-items: center; gap: 0.75rem; }
 .topbar__user { color: var(--muted); font-size: 13px; }
+
+/* Botón icono */
+.btn--icon {
+  padding: 0.375rem;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+}
 
 /* ===== Layout ===== */
 .layout {
@@ -296,18 +361,30 @@ textarea { resize: vertical; min-height: 80px; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  transition: box-shadow 0.15s;
 }
-.gallery-img-item img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
-.gallery-img-item__body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.gallery-img-item:hover { box-shadow: var(--shadow); }
+.gallery-img-item img {
+  width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
+  background: var(--bg);
+}
+.gallery-img-item__body {
+  padding: 0.75rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
 .gallery-img-item input { font-size: 12px; padding: 0.375rem 0.5rem; }
+.gallery-img-item .save-caption-btn { align-self: flex-end; font-size: 11px; }
 .gallery-img-item__remove {
   position: absolute; top: 0.5rem; right: 0.5rem;
-  background: rgba(0,0,0,0.6); color: #fff;
+  background: rgba(239,68,68,0.85); color: #fff;
   width: 28px; height: 28px;
   border-radius: 50%;
   display: grid; place-items: center;
   cursor: pointer; border: none;
+  font-size: 1rem; font-weight: 700;
+  transition: background 0.15s;
 }
+.gallery-img-item__remove:hover { background: var(--danger); }
 
 /* ===== Empty state ===== */
 .empty {
