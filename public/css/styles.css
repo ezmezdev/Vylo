@@ -675,6 +675,86 @@ a { color: inherit; text-decoration: none; }
 .section[style*="overflow: hidden"] {
   padding-bottom: calc(var(--section-padding-y, 5rem) + 60px);
 }
+
+/* ============================================================
+   EFECTOS DE MOVIMIENTO
+   ============================================================ */
+
+/* Respeto prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .motion-entry,
+  .motion-float,
+  .motion-pulse,
+  .motion-zoom-bg { animation: none !important; transition: none !important; }
+  .motion-entry { opacity: 1 !important; transform: none !important; }
+}
+
+/* Efectos de entrada al scroll */
+.motion-entry {
+  opacity: 0;
+  transition: opacity 0.85s var(--ease), transform 0.85s var(--ease);
+}
+.motion-entry.motion-fade-up    { transform: translateY(50px); }
+.motion-entry.motion-fade-down  { transform: translateY(-50px); }
+.motion-entry.motion-fade-left  { transform: translateX(-60px); }
+.motion-entry.motion-fade-right { transform: translateX(60px); }
+.motion-entry.motion-zoom-in    { transform: scale(0.88); }
+.motion-entry.motion-zoom-out   { transform: scale(1.12); }
+.motion-entry.motion-flip-up    {
+  transform: perspective(600px) rotateX(18deg);
+  transform-origin: bottom center;
+}
+.motion-entry--visible {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Zoom lento del fondo */
+.motion-zoom-bg { overflow: hidden; }
+.motion-zoom-bg::after {
+  content: '';
+  position: absolute; inset: -8%;
+  background: inherit;
+  background-size: cover;
+  background-position: center;
+  animation: zoom-bg-anim 14s ease-in-out infinite alternate;
+  z-index: 0;
+  pointer-events: none;
+}
+.motion-zoom-bg .section__inner { position: relative; z-index: 1; }
+@keyframes zoom-bg-anim {
+  from { transform: scale(1); }
+  to   { transform: scale(1.15); }
+}
+
+/* Flotación suave del contenido */
+.motion-float {
+  animation: float-anim 4.5s ease-in-out infinite;
+}
+@keyframes float-anim {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+
+/* Pulso suave */
+.motion-pulse {
+  animation: pulse-soft-anim 3.5s ease-in-out infinite;
+}
+@keyframes pulse-soft-anim {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.82; transform: scale(1.018); }
+}
+
+/* Parallax — desactivado en mobile (fixed no funciona en iOS) */
+.has-parallax {
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+@media (max-width: 768px) {
+  .has-parallax { background-attachment: scroll; }
+}
+
 @media print {
   .loader, .lightbox, .calendar__buttons, .hero__scroll { display: none !important; }
   .section { page-break-inside: avoid; opacity: 1; transform: none; }
