@@ -675,10 +675,21 @@ a { color: inherit; text-decoration: none; }
   color: var(--color-muted);
   font-family: var(--font-body);
 }
-.footer__vylo-svg {
-  display: block;
-  overflow: visible;
+.footer__vylo {
+  font-family: 'Pinyon Script', 'Great Vibes', cursive;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--color-accent);
+  letter-spacing: 0.02em;
 }
+.footer__vylo-img {
+  display: block;
+  height: 56px;
+  width: auto;
+  opacity: 0.75;
+  transition: opacity 0.2s;
+}
+.footer__vylo-img:hover { opacity: 1; }
 
 /* ============================================================
    RESPONSIVO — mobile-first
