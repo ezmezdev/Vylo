@@ -519,6 +519,9 @@ function openSectionModal(section) {
   f.font_size.value = section.font_size || '';
   f.padding_y.value = section.padding_y ?? 80;
 
+  // Inicializar campo de transición
+  f.bottom_transition.value = section.bottom_transition || 'none';
+
   // Campos de contenido según el tipo
   const fieldsEl = $('#section-content-fields');
   fieldsEl.innerHTML = '';
@@ -691,6 +694,7 @@ $('#section-modal form').addEventListener('submit', async e => {
     padding_y: f.padding_y.value !== '' ? Number(f.padding_y.value) : 80,
     min_height: f.min_height.value !== '' && Number(f.min_height.value) > 0 ? Number(f.min_height.value) : null,
     bg_overlay: Number(f.bg_overlay.value) || 0,
+    bottom_transition: f.bottom_transition.value || 'none',
     content
   };
 

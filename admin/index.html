@@ -303,6 +303,21 @@
               <input type="range" name="bg_overlay" min="0" max="1" step="0.05" value="0" />
               <small id="bg-overlay-value">0</small>
             </label>
+            <label class="full">
+              <span>Transición inferior (borde entre secciones)</span>
+              <select name="bottom_transition">
+                <option value="none">— Sin efecto</option>
+                <option value="curve-down">⌒ Curva hacia abajo</option>
+                <option value="curve-up">⌣ Curva hacia arriba</option>
+                <option value="wave">〜 Ola</option>
+                <option value="wave-double">≋ Ola doble</option>
+                <option value="slant-right">╱ Diagonal derecha</option>
+                <option value="slant-left">╲ Diagonal izquierda</option>
+                <option value="triangle">▽ Triángulo</option>
+                <option value="zigzag">⩕ Zigzag</option>
+              </select>
+              <small>El color de la transición toma el fondo de la sección siguiente.</small>
+            </label>
           </div>
         </fieldset>
 
