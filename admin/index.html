@@ -285,7 +285,23 @@
             </label>
             <label>
               <span>Padding vertical (px)</span>
-              <input type="number" name="padding_y" min="0" max="200" />
+              <input type="number" name="padding_y" min="0" max="400" />
+            </label>
+            <label>
+              <span>Altura mínima (px, 0 = auto)</span>
+              <input type="number" name="min_height" min="0" max="1200" placeholder="auto" />
+            </label>
+            <label class="full">
+              <span>Imagen de fondo de la sección</span>
+              <input type="file" name="section_bg_image" accept="image/*" />
+              <img id="section-bg-preview" class="img-preview" style="aspect-ratio:16/5;object-fit:cover;max-width:100%" alt="" hidden />
+              <small id="section-bg-current"></small>
+              <button type="button" class="link-btn" id="clear-section-bg">Quitar imagen de fondo</button>
+            </label>
+            <label class="full">
+              <span>Opacidad del overlay (0 = sin overlay, 1 = negro total)</span>
+              <input type="range" name="bg_overlay" min="0" max="1" step="0.05" value="0" />
+              <small id="bg-overlay-value">0</small>
             </label>
           </div>
         </fieldset>
