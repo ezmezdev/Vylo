@@ -1,12 +1,11 @@
 // ============================================================
 // INVITACIONES DINÁMICAS · APP PRINCIPAL
 // ============================================================
-// Lee la invitación desde Supabase según el slug en la URL
-// y renderiza las secciones habilitadas en el orden definido.
-// ============================================================
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET, DEFAULT_SLUG } = window.APP_CONFIG;
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.addEventListener('DOMContentLoaded', function() {
 
 // ---- Helpers ----
 
@@ -354,3 +353,5 @@ init().catch(err => {
   document.getElementById('loader').hidden = true;
   document.getElementById('error-state').hidden = false;
 });
+
+}); // fin DOMContentLoaded
