@@ -511,8 +511,9 @@ function openSectionModal(section) {
 
   $('#section-modal-title').textContent = `Editar: ${sectionLabel(section.section_type)}`;
   f.is_enabled.checked = section.is_enabled;
-  f.background_color.value = section.background_color || '#000000';
-  f.text_color.value = section.text_color || '#000000';
+  // Color pickers: usar valor guardado o blanco como fallback (no negro)
+  f.background_color.value = section.background_color || '#ffffff';
+  f.text_color.value = section.text_color || '#1a1a1a';
   f.heading_font.value = section.heading_font || '';
   f.body_font.value = section.body_font || '';
   f.font_size.value = section.font_size || '';
@@ -646,44 +647,54 @@ $$('#section-modal [data-clear]').forEach(btn => {
 });
 
 $('#section-modal form').addEventListener('submit', async e => {
-  // Si fue cerrado con boton "Guardar" (default submit)
   if (e.submitter && e.submitter.dataset.action === 'close') return;
   e.preventDefault();
   const f = e.target;
   const section = state.editingSection;
+  const modal = $('#section-modal');
   const fd = new FormData(f);
+
+  console.log('[Modal] Guardando sección:', section.section_type);
 
   // Reconstruir content
   const content = { ...(section.content || {}) };
   for (const [key, value] of fd.entries()) {
     if (key.startsWith('content_')) {
       const k = key.replace('content_', '');
-      if (['title','subtitle','eyebrow','quote','button_text'].includes(k)) {
+      if (['title','subtitle','eyebrow','quote','button_text','layout'].includes(k)) {
         content[k] = value;
       } else {
         content[k] = isNaN(value) || value === '' ? value : Number(value);
       }
     }
   }
-  // Checkboxes no aparecen en FormData si no están marcados — los procesamos aparte
+  // Checkboxes no aparecen en FormData si no están marcados
   const checkboxFields = ['show_ics'];
   checkboxFields.forEach(k => {
     const el = f.querySelector(`[name="content_${k}"]`);
     if (el) content[k] = el.checked;
   });
 
+  // Colores: solo guardar si son distintos de negro puro (#000000)
+  // Negro puro = el valor por defecto del color picker sin tocar
+  const bgColor = f.background_color.value;
+  const txtColor = f.text_color.value;
+  const hasBgColorData = section.background_color; // ya tenía color guardado
+
   const update = {
     is_enabled: f.is_enabled.checked,
-    background_color: f.background_color.value || null,
-    text_color: f.text_color.value || null,
-    heading_font: f.heading_font.value || null,
-    body_font: f.body_font.value || null,
+    background_color: (bgColor && bgColor !== '#000000') || hasBgColorData ? (bgColor !== '#000000' ? bgColor : null) : null,
+    text_color: (txtColor && txtColor !== '#000000') ? txtColor : null,
+    heading_font: f.heading_font.value.trim() || null,
+    body_font: f.body_font.value.trim() || null,
     font_size: f.font_size.value ? Number(f.font_size.value) : null,
-    padding_y: f.padding_y.value ? Number(f.padding_y.value) : 80,
-    min_height: f.min_height.value ? Number(f.min_height.value) : null,
+    padding_y: f.padding_y.value !== '' ? Number(f.padding_y.value) : 80,
+    min_height: f.min_height.value !== '' && Number(f.min_height.value) > 0 ? Number(f.min_height.value) : null,
     bg_overlay: Number(f.bg_overlay.value) || 0,
     content
   };
+
+  console.log('[Modal] Update a guardar:', update);
 
   // Quitar imagen de fondo
   if (modal._clearBg) update.bg_image_url = null;
