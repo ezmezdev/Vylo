@@ -116,6 +116,33 @@ function applySectionStyles(el, section) {
   if (section.body_font)         el.style.setProperty('--section-body-font', `'${section.body_font}'`);
   if (section.font_size)         el.style.setProperty('--section-font-size', `${section.font_size}px`);
   if (section.padding_y != null) el.style.setProperty('--section-padding-y', `${section.padding_y}px`);
+  if (section.min_height)        el.style.minHeight = `${section.min_height}px`;
+
+  // Imagen de fondo con overlay
+  if (section.bg_image_url) {
+    const url = storageUrl(section.bg_image_url);
+    el.style.backgroundImage = `url('${url}')`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    el.style.backgroundAttachment = 'scroll';
+    el.style.position = 'relative';
+
+    // Overlay semitransparente
+    const overlay = parseFloat(section.bg_overlay) || 0;
+    if (overlay > 0) {
+      const ov = document.createElement('div');
+      ov.setAttribute('aria-hidden', 'true');
+      ov.style.cssText = `
+        position:absolute;inset:0;z-index:0;
+        background:rgba(0,0,0,${overlay});pointer-events:none;
+      `;
+      el.style.isolation = 'isolate';
+      el.insertBefore(ov, el.firstChild);
+      // Asegurar que el contenido quede encima del overlay
+      const inner = el.querySelector('.section__inner');
+      if (inner) inner.style.position = 'relative';
+    }
+  }
 }
 
 function renderHero(el, inv, content) {
@@ -182,8 +209,11 @@ function renderCalendar(el, inv, content) {
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
   el.querySelector('[data-field="button_text"]').textContent = content.button_text || 'Agregar al calendario';
 
+  // Mostrar/ocultar botón .ics
+  const icalLink = el.querySelector('[data-action="add-ical"]');
+  icalLink.hidden = !content.show_ics;
+
   const start = new Date(inv.event_date);
-  // Duración por defecto: 4 horas (configurable en content.duration_hours)
   const durationH = Number(content.duration_hours) || 4;
   const end = new Date(start.getTime() + durationH * 3600 * 1000);
   const title = `${inv.event_title} - ${inv.host_names}`;
@@ -202,8 +232,7 @@ function renderCalendar(el, inv, content) {
     window.open(url.toString(), '_blank', 'noopener');
   });
 
-  // .ics descargable (Apple, Outlook, etc.)
-  const icalLink = el.querySelector('[data-action="add-ical"]');
+  // .ics descargable
   const fmtIcs = d => d.toISOString().replace(/[-:]|\.\d{3}/g, '');
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Invitaciones//ES',
@@ -224,28 +253,59 @@ function renderGallery(el, inv, content, images) {
   el.querySelector('[data-field="title"]').textContent = content.title || 'Galería';
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
   const grid = el.querySelector('[data-field="gallery-grid"]');
+  const layout = content.layout || 'masonry';
+  grid.className = `gallery gallery--${layout}`;
+  grid.dataset.layout = layout;
 
   if (!images.length) {
-    grid.innerHTML = '<p style="color:var(--color-muted);font-style:italic;">Próximamente compartiremos nuestras fotos.</p>';
+    grid.innerHTML = '<p class="gallery__empty">Próximamente compartiremos nuestras fotos.</p>';
     return;
   }
-  images.forEach((img, i) => {
-    const figure = document.createElement('figure');
-    figure.className = 'gallery__item';
-    figure.tabIndex = 0;
-    figure.setAttribute('role', 'button');
-    figure.setAttribute('aria-label', `Ampliar imagen: ${img.alt_text}`);
-    figure.innerHTML = `
-      <img src="${storageUrl(img.image_url)}" alt="${img.alt_text}"
-           loading="lazy" decoding="async" />
-    `;
-    figure.dataset.index = i;
-    figure.addEventListener('click', () => openLightbox(images, i));
-    figure.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }
+
+  if (layout === 'featured') {
+    // Primera imagen grande, resto miniaturas
+    images.forEach((img, i) => {
+      const figure = document.createElement('figure');
+      figure.className = i === 0 ? 'gallery__item gallery__item--featured' : 'gallery__item gallery__item--thumb';
+      figure.tabIndex = 0;
+      figure.setAttribute('role', 'button');
+      figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text}`);
+      figure.innerHTML = `<img src="${storageUrl(img.image_url)}" alt="${img.alt_text}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" />`;
+      figure.dataset.index = i;
+      figure.addEventListener('click', () => openLightbox(images, i));
+      figure.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }});
+      grid.appendChild(figure);
     });
-    grid.appendChild(figure);
-  });
+  } else if (layout === 'horizontal') {
+    images.forEach((img, i) => {
+      const figure = document.createElement('figure');
+      figure.className = 'gallery__item';
+      figure.tabIndex = 0;
+      figure.setAttribute('role', 'button');
+      figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text}`);
+      figure.innerHTML = `<img src="${storageUrl(img.image_url)}" alt="${img.alt_text}" loading="lazy" decoding="async" />`;
+      figure.dataset.index = i;
+      figure.addEventListener('click', () => openLightbox(images, i));
+      figure.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }});
+      grid.appendChild(figure);
+    });
+  } else {
+    images.forEach((img, i) => {
+      const figure = document.createElement('figure');
+      figure.className = 'gallery__item';
+      figure.tabIndex = 0;
+      figure.setAttribute('role', 'button');
+      figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text}`);
+      figure.innerHTML = `
+        <img src="${storageUrl(img.image_url)}" alt="${img.alt_text}" loading="lazy" decoding="async" />
+        ${img.caption ? `<figcaption class="gallery__caption">${img.caption}</figcaption>` : ''}
+      `;
+      figure.dataset.index = i;
+      figure.addEventListener('click', () => openLightbox(images, i));
+      figure.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }});
+      grid.appendChild(figure);
+    });
+  }
 }
 
 // ---- Lightbox ----
