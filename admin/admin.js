@@ -43,7 +43,6 @@ function loadGoogleFont(fontName) {
 
 function initFontPickers(container = document) {
   container.querySelectorAll('.font-picker').forEach(picker => {
-    // Evitar doble inicialización
     if (picker.dataset.initialized) return;
     picker.dataset.initialized = 'true';
 
@@ -57,7 +56,6 @@ function initFontPickers(container = document) {
 
     function buildList() {
       if (list.children.length) return;
-      // Opción heredar (solo en secciones)
       if (allowInherit) {
         const li = document.createElement('li');
         li.className = 'font-picker__option font-picker__option--inherit';
@@ -85,6 +83,9 @@ function initFontPickers(container = document) {
       });
     }
 
+    // Precargar lista inmediatamente (sin mostrarla)
+    buildList();
+
     function selectFont(font) {
       input.value = font;
       if (font) {
@@ -105,7 +106,6 @@ function initFontPickers(container = document) {
     }
 
     function openList() {
-      buildList();
       list.hidden = false;
       trigger.classList.add('is-open');
       const selected = list.querySelector('.is-selected');
@@ -122,7 +122,6 @@ function initFontPickers(container = document) {
     document.addEventListener('click', e => { if (!picker.contains(e.target)) closeList(); });
     picker.addEventListener('keydown', e => { if (e.key === 'Escape') closeList(); });
 
-    // Aplicar valor inicial
     const currentFont = input.value;
     if (currentFont) {
       loadGoogleFont(currentFont);
@@ -691,11 +690,12 @@ function openSectionModal(section) {
   // Color pickers: usar valor guardado o blanco como fallback (no negro)
   f.background_color.value = section.background_color || '#ffffff';
   f.text_color.value = section.text_color || '#1a1a1a';
-  // Reinicializar font-pickers del modal (limpiar estado previo)
+  // Resetear font-pickers del modal antes de reinicializar
   modal.querySelectorAll('.font-picker').forEach(p => {
     delete p.dataset.initialized;
-    p.querySelector('.font-picker__list').innerHTML = '';
-    p.querySelector('.font-picker__list').hidden = true;
+    const list = p.querySelector('.font-picker__list');
+    list.innerHTML = '';
+    list.hidden = true;
     p.querySelector('.font-picker__trigger').classList.remove('is-open');
   });
 
@@ -703,7 +703,7 @@ function openSectionModal(section) {
   setFontPickerValue(modal, 'heading_font', section.heading_font || '');
   setFontPickerValue(modal, 'body_font', section.body_font || '');
 
-  // Inicializar pickers del modal
+  // Inicializar pickers del modal (buildList se llama internamente)
   initFontPickers(modal);
   f.font_size.value = section.font_size || '';
   f.padding_y.value = section.padding_y ?? 80;
