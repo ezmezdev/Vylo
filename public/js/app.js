@@ -109,7 +109,7 @@ function applyTheme(inv) {
     `${inv.event_title} · ${formatDate(inv.event_date)}`;
 }
 
-function applySectionStyles(el, section) {
+function applySectionStyles(el, section, nextSection) {
   if (section.background_color) el.style.setProperty('--section-bg', section.background_color);
   if (section.text_color)        el.style.setProperty('--section-color', section.text_color);
   if (section.heading_font)      el.style.setProperty('--section-heading-font', `'${section.heading_font}'`);
@@ -127,22 +127,61 @@ function applySectionStyles(el, section) {
     el.style.backgroundAttachment = 'scroll';
     el.style.position = 'relative';
 
-    // Overlay semitransparente
     const overlay = parseFloat(section.bg_overlay) || 0;
     if (overlay > 0) {
       const ov = document.createElement('div');
       ov.setAttribute('aria-hidden', 'true');
-      ov.style.cssText = `
-        position:absolute;inset:0;z-index:0;
-        background:rgba(0,0,0,${overlay});pointer-events:none;
-      `;
+      ov.style.cssText = `position:absolute;inset:0;z-index:0;background:rgba(0,0,0,${overlay});pointer-events:none;`;
       el.style.isolation = 'isolate';
       el.insertBefore(ov, el.firstChild);
-      // Asegurar que el contenido quede encima del overlay
       const inner = el.querySelector('.section__inner');
       if (inner) inner.style.position = 'relative';
     }
   }
+
+  // Transición inferior entre secciones
+  const transition = section.bottom_transition || 'none';
+  if (transition !== 'none') {
+    // Color de la sección siguiente (o el bg global)
+    const nextBg = nextSection?.background_color ||
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+    el.style.position = 'relative';
+    el.style.overflow = 'hidden'; // asegura que el SVG no desborde
+    const svgEl = buildTransitionSVG(transition, nextBg);
+    if (svgEl) el.appendChild(svgEl);
+  }
+}
+
+/** Genera el SVG de transición posicionado en la parte inferior de la sección */
+function buildTransitionSVG(type, fillColor) {
+  const wrap = document.createElement('div');
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.style.cssText = `
+    position:absolute; bottom:-1px; left:0; width:100%;
+    line-height:0; overflow:hidden; z-index:3;
+  `;
+
+  const shapes = {
+    'curve-down': `<path d="M0,0 C360,80 720,80 1440,0 L1440,80 L0,80 Z"/>`,
+    'curve-up':   `<path d="M0,80 C360,0 1080,0 1440,80 L1440,80 L0,80 Z"/>`,
+    'wave':       `<path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z"/>`,
+    'wave-double':`<path d="M0,40 C180,80 360,0 540,40 C720,80 900,0 1080,40 C1260,80 1350,60 1440,40 L1440,80 L0,80 Z"/>`,
+    'slant-right':`<polygon points="0,80 1440,0 1440,80"/>`,
+    'slant-left': `<polygon points="0,0 1440,80 0,80"/>`,
+    'triangle':   `<polygon points="0,80 720,0 1440,80"/>`,
+    'zigzag':     `<polyline points="0,80 120,20 240,80 360,20 480,80 600,20 720,80 840,20 960,80 1080,20 1200,80 1320,20 1440,80 1440,80 0,80" fill="${fillColor}"/>`
+  };
+
+  const shape = shapes[type];
+  if (!shape) return null;
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg"
+         preserveAspectRatio="none" style="width:100%;height:60px;display:block">
+      <g fill="${fillColor}">${shape}</g>
+    </svg>
+  `;
+  return wrap;
 }
 
 function renderHero(el, inv, content) {
@@ -363,7 +402,7 @@ function renderSections({ invitation, sections, gallery }) {
   const container = document.getElementById('sections-container');
   console.log('[Landing] Renderizando', sections.length, 'secciones');
 
-  sections.forEach(section => {
+  sections.forEach((section, idx) => {
     try {
       console.log('[Landing] Renderizando sección:', section.section_type);
       const tpl = document.getElementById(`tpl-${section.section_type}`);
@@ -373,7 +412,8 @@ function renderSections({ invitation, sections, gallery }) {
       }
 
       const node = tpl.content.firstElementChild.cloneNode(true);
-      applySectionStyles(node, section);
+      const nextSection = sections[idx + 1] || null;
+      applySectionStyles(node, section, nextSection);
 
       const renderer = RENDERERS[section.section_type];
       if (renderer) {
