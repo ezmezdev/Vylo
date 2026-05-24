@@ -297,24 +297,33 @@ const RENDERERS = {
 
 function renderSections({ invitation, sections, gallery }) {
   const container = document.getElementById('sections-container');
+  console.log('[Landing] Renderizando', sections.length, 'secciones');
 
   sections.forEach(section => {
-    const tpl = document.getElementById(`tpl-${section.section_type}`);
-    if (!tpl) return; // tipo desconocido, lo saltamos
-
-    const node = tpl.content.firstElementChild.cloneNode(true);
-    applySectionStyles(node, section);
-
-    const renderer = RENDERERS[section.section_type];
-    if (renderer) {
-      // Galería recibe imágenes adicionalmente
-      if (section.section_type === 'gallery') {
-        renderer(node, invitation, section.content || {}, gallery);
-      } else {
-        renderer(node, invitation, section.content || {});
+    try {
+      console.log('[Landing] Renderizando sección:', section.section_type);
+      const tpl = document.getElementById(`tpl-${section.section_type}`);
+      if (!tpl) {
+        console.warn('[Landing] Template no encontrado para:', section.section_type);
+        return;
       }
+
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      applySectionStyles(node, section);
+
+      const renderer = RENDERERS[section.section_type];
+      if (renderer) {
+        if (section.section_type === 'gallery') {
+          renderer(node, invitation, section.content || {}, gallery);
+        } else {
+          renderer(node, invitation, section.content || {});
+        }
+      }
+      container.appendChild(node);
+      console.log('[Landing] Sección OK:', section.section_type);
+    } catch(e) {
+      console.error('[Landing] Error en sección', section.section_type, ':', e);
     }
-    container.appendChild(node);
   });
 
   // Reveal con IntersectionObserver
@@ -325,33 +334,45 @@ function renderSections({ invitation, sections, gallery }) {
         io.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.15 });
+  }, { threshold: 0.05 });
   document.querySelectorAll('.section').forEach(s => io.observe(s));
 }
 
 // ---- Inicio ----
 
 async function init() {
-  setupLightbox();
-  const slug = getSlug();
-  const data = await fetchInvitation(slug);
+  console.log('[Landing] Iniciando...');
+  try {
+    setupLightbox();
+    const slug = getSlug();
+    const data = await fetchInvitation(slug);
 
-  document.getElementById('loader').hidden = true;
+    if (!data) {
+      console.log('[Landing] No se encontró la invitación o no está publicada');
+      document.getElementById('loader').hidden = true;
+      document.getElementById('error-state').hidden = false;
+      return;
+    }
 
-  if (!data) {
+    console.log('[Landing] Aplicando tema...');
+    applyTheme(data.invitation);
+
+    console.log('[Landing] Renderizando secciones:', data.sections.length);
+    renderSections(data);
+
+    console.log('[Landing] Mostrando página');
+    document.getElementById('loader').hidden = true;
+    document.getElementById('main').hidden = false;
+    console.log('[Landing] ¡Listo!');
+
+  } catch(err) {
+    console.error('[Landing] Error en init:', err);
+    console.error('[Landing] Stack:', err.stack);
+    document.getElementById('loader').hidden = true;
     document.getElementById('error-state').hidden = false;
-    return;
   }
-
-  applyTheme(data.invitation);
-  renderSections(data);
-  document.getElementById('main').hidden = false;
 }
 
-init().catch(err => {
-  console.error('Error al inicializar:', err);
-  document.getElementById('loader').hidden = true;
-  document.getElementById('error-state').hidden = false;
-});
+init();
 
 }); // fin DOMContentLoaded
