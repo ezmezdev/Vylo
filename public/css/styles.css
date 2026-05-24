@@ -873,3 +873,167 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 640px) {
   .location__map { height: var(--map-height-mobile, 260px); }
 }
+
+/* ============================================================
+   SECCIÓN INFO (columnas con icono + título + texto)
+   ============================================================ */
+.info__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem 3rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+.info__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+.info__col + .info__col {
+  border-left: 1px solid var(--color-border);
+}
+@media (max-width: 640px) {
+  .info__col + .info__col { border-left: none; border-top: 1px solid var(--color-border); padding-top: 2rem; }
+}
+.info__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+.info__col-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.info__col-title {
+  font-family: var(--section-heading-font, var(--font-heading));
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 400;
+  line-height: 1.2;
+}
+.info__col-text {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  line-height: 1.6;
+  max-width: 260px;
+}
+
+/* ============================================================
+   SECCIÓN REGALO / ALIAS
+   ============================================================ */
+.gift__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2rem 3rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+.gift__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+.gift__col + .gift__col {
+  border-left: 1px solid var(--color-border);
+}
+@media (max-width: 640px) {
+  .gift__col + .gift__col { border-left: none; border-top: 1px solid var(--color-border); padding-top: 2rem; }
+}
+.gift__icon { font-size: 2.5rem; line-height: 1; }
+.gift__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.gift__col-title {
+  font-family: var(--section-heading-font, var(--font-heading));
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 400;
+}
+.gift__col-text {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  line-height: 1.6;
+  max-width: 280px;
+}
+.gift__alias-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  cursor: pointer;
+  position: relative;
+}
+.gift__alias {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--color-accent);
+  padding-bottom: 2px;
+}
+.gift__copy-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 0.25rem;
+  transition: color 0.2s;
+}
+.gift__copy-btn:hover { color: var(--color-accent); }
+
+/* Modal de alias */
+.alias-modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 300;
+  display: grid; place-items: center;
+  padding: 1.5rem;
+  animation: fade-in 0.25s ease;
+}
+.alias-modal__box {
+  background: var(--color-bg);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.alias-modal__icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-bg);
+  font-size: 1.75rem;
+  display: grid; place-items: center;
+}
+.alias-modal__title {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+.alias-modal__text { color: var(--color-muted); font-size: 0.95rem; }
+.alias-modal__redirect { font-size: 0.9rem; color: var(--color-muted); }
+.alias-modal__count {
+  font-weight: 700;
+  color: var(--color-primary);
+  display: inline-block;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  line-height: 24px;
+  text-align: center;
+}
+.alias-modal__cancel { margin-top: 0.5rem; }
