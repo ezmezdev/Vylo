@@ -263,7 +263,8 @@ function applyMotionEffect(el, effect) {
     const inner = el.querySelector('.section__inner') || el;
     inner.classList.add('motion-pulse');
   } else {
-    el.classList.add('motion-entry', `motion-${effect}`);
+    // Efectos de entrada — agregar has-reveal + clase específica
+    el.classList.add('has-reveal', 'motion-entry', `motion-${effect}`);
     el.style.opacity = '0';
   }
 }
@@ -570,20 +571,18 @@ function renderSections({ invitation, sections, gallery }) {
     }
   });
 
-  // IntersectionObserver: maneja reveal base + efectos de entrada
+  // IntersectionObserver — solo anima secciones con has-reveal o motion-entry
   const io = new IntersectionObserver(entries => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const el = entry.target;
-        if (el.classList.contains('motion-entry')) {
-          // Efecto de entrada animado
-          el.classList.add('motion-entry--visible');
-        } else {
-          // Reveal base
-          el.classList.add('is-visible');
-        }
-        io.unobserve(el);
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      if (el.classList.contains('motion-entry')) {
+        el.classList.add('motion-entry--visible');
+      } else if (el.classList.contains('has-reveal')) {
+        el.classList.add('is-visible');
       }
+      // Sin clase de animación → ya es visible, no hacer nada
+      io.unobserve(el);
     });
   }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
 
