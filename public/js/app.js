@@ -139,8 +139,40 @@ function applySectionStyles(el, section, nextSection) {
     }
   }
 
-  // Transición inferior entre secciones
-  const transition = section.bottom_transition || 'none';
+  // Efecto de movimiento
+  const motion = section.motion_effect || 'none';
+  if (motion !== 'none') applyMotionEffect(el, motion);
+}
+
+function applyMotionEffect(el, effect) {
+  // --- Efectos de fondo (parallax, zoom) ---
+  if (effect === 'parallax' || effect === 'parallax-fast') {
+    el.style.backgroundAttachment = 'fixed';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center center';
+    const speed = effect === 'parallax-fast' ? 0.5 : 0.25;
+    el.dataset.parallaxSpeed = speed;
+    el.classList.add('has-parallax');
+
+  } else if (effect === 'zoom-bg') {
+    el.classList.add('motion-zoom-bg');
+
+  } else if (effect === 'float') {
+    const inner = el.querySelector('.section__inner') || el;
+    inner.classList.add('motion-float');
+
+  } else if (effect === 'pulse-soft') {
+    const inner = el.querySelector('.section__inner') || el;
+    inner.classList.add('motion-pulse');
+
+  } else {
+    // Efectos de entrada al hacer scroll (fade-up, fade-left, zoom-in, etc.)
+    el.classList.add('motion-entry', `motion-${effect}`);
+    // Quitar la clase de animación base que ya existe (.section opacity:0)
+    // y reemplazarla con la propia del efecto
+    el.style.opacity = '0';
+  }
+}
   if (transition !== 'none') {
     // Color de la sección siguiente (o el bg global)
     const nextBg = nextSection?.background_color ||
@@ -430,16 +462,39 @@ function renderSections({ invitation, sections, gallery }) {
     }
   });
 
-  // Reveal con IntersectionObserver
+  // IntersectionObserver: maneja reveal base + efectos de entrada
   const io = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible');
-        io.unobserve(entry.target);
+        const el = entry.target;
+        if (el.classList.contains('motion-entry')) {
+          // Efecto de entrada animado
+          el.classList.add('motion-entry--visible');
+        } else {
+          // Reveal base
+          el.classList.add('is-visible');
+        }
+        io.unobserve(el);
       }
     });
-  }, { threshold: 0.05 });
+  }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
+
   document.querySelectorAll('.section').forEach(s => io.observe(s));
+
+  // Parallax scroll handler
+  const parallaxSections = document.querySelectorAll('.has-parallax');
+  if (parallaxSections.length) {
+    const handleParallax = () => {
+      parallaxSections.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const speed = parseFloat(el.dataset.parallaxSpeed) || 0.25;
+        const offset = (rect.top * speed).toFixed(2);
+        el.style.backgroundPositionY = `calc(50% + ${offset}px)`;
+      });
+    };
+    window.addEventListener('scroll', handleParallax, { passive: true });
+    handleParallax();
+  }
 }
 
 // ---- Inicio ----
