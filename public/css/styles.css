@@ -805,14 +805,13 @@ a { color: inherit; text-decoration: none; }
   50%       { opacity: 0.82; transform: scale(1.018); }
 }
 
-/* Parallax — desactivado en mobile (fixed no funciona en iOS) */
-.has-parallax {
-  background-attachment: fixed;
-  background-size: cover;
-  background-repeat: no-repeat;
-}
-@media (max-width: 768px) {
-  .has-parallax { background-attachment: scroll; }
+/* Parallax — usa transform en el div interno, no background-attachment */
+.has-parallax { overflow: hidden; }
+.has-parallax .section-bg-wrap { overflow: hidden; }
+.has-parallax .section-bg-wrap div {
+  will-change: transform;
+  /* Escalar un poco para que el movimiento no muestre bordes */
+  transform: scale(1.15);
 }
 
 @media print {
