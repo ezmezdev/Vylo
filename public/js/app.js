@@ -118,30 +118,75 @@ function applySectionStyles(el, section, nextSection) {
   if (section.padding_y != null) el.style.setProperty('--section-padding-y', `${section.padding_y}px`);
   if (section.min_height)        el.style.minHeight = `${section.min_height}px`;
 
-  // Imagen de fondo con overlay
+  // ── Imagen de fondo aislada por sección ──────────────────────
+  // Se usa un <div> absoluto para que NO afecte otras secciones.
+  // La imagen, el blur y el overlay viven todos dentro de ese div.
   if (section.bg_image_url) {
     const url = storageUrl(section.bg_image_url);
-    el.style.backgroundImage = `url('${url}')`;
-    el.style.backgroundSize = 'cover';
-    el.style.backgroundPosition = 'center';
-    el.style.backgroundAttachment = 'scroll';
-    el.style.position = 'relative';
+    const overlay = Math.min(Math.max(parseFloat(section.bg_overlay) || 0, 0), 1);
+    const blur    = Math.min(Math.max(parseFloat(section.bg_blur)    || 0, 0), 20);
 
-    const overlay = parseFloat(section.bg_overlay) || 0;
+    // Contenedor aislado de fondo
+    const bgWrap = document.createElement('div');
+    bgWrap.setAttribute('aria-hidden', 'true');
+    bgWrap.className = 'section-bg-wrap';
+    bgWrap.style.cssText = `
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    `;
+
+    // La imagen en sí (con blur aplicado solo a ella)
+    const bgImg = document.createElement('div');
+    bgImg.style.cssText = `
+      position: absolute;
+      inset: ${blur > 0 ? `-${blur * 2}px` : '0'};
+      background-image: url('${url}');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      ${blur > 0 ? `filter: blur(${blur}px);` : ''}
+    `;
+    bgWrap.appendChild(bgImg);
+
+    // Overlay de color/opacidad (encima de la imagen, debajo del contenido)
     if (overlay > 0) {
       const ov = document.createElement('div');
-      ov.setAttribute('aria-hidden', 'true');
-      ov.style.cssText = `position:absolute;inset:0;z-index:0;background:rgba(0,0,0,${overlay});pointer-events:none;`;
-      el.style.isolation = 'isolate';
-      el.insertBefore(ov, el.firstChild);
-      const inner = el.querySelector('.section__inner');
-      if (inner) inner.style.position = 'relative';
+      ov.style.cssText = `
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,${overlay});
+      `;
+      bgWrap.appendChild(ov);
     }
+
+    // Insertar el wrap como primer hijo y posicionar la sección
+    el.style.position = 'relative';
+    el.style.isolation = 'isolate';
+    el.insertBefore(bgWrap, el.firstChild);
+
+    // Asegurar que todo el contenido quede encima del fondo
+    el.querySelectorAll(':scope > *:not(.section-bg-wrap)').forEach(child => {
+      child.style.position = 'relative';
+      child.style.zIndex = '1';
+    });
   }
 
   // Efecto de movimiento
   const motion = section.motion_effect || 'none';
   if (motion !== 'none') applyMotionEffect(el, motion);
+
+  // Transición inferior entre secciones
+  const transition = section.bottom_transition || 'none';
+  if (transition !== 'none') {
+    const nextBg = nextSection?.background_color ||
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+    el.style.overflow = 'hidden';
+    const svgEl = buildTransitionSVG(transition, nextBg);
+    if (svgEl) el.appendChild(svgEl);
+  }
 }
 
 function applyMotionEffect(el, effect) {
@@ -171,16 +216,6 @@ function applyMotionEffect(el, effect) {
     // Quitar la clase de animación base que ya existe (.section opacity:0)
     // y reemplazarla con la propia del efecto
     el.style.opacity = '0';
-  }
-}
-  if (transition !== 'none') {
-    // Color de la sección siguiente (o el bg global)
-    const nextBg = nextSection?.background_color ||
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
-    el.style.position = 'relative';
-    el.style.overflow = 'hidden'; // asegura que el SVG no desborde
-    const svgEl = buildTransitionSVG(transition, nextBg);
-    if (svgEl) el.appendChild(svgEl);
   }
 }
 
