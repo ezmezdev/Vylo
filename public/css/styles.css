@@ -674,13 +674,8 @@ a { color: inherit; text-decoration: none; }
 /* El contenedor de secciones no debe cortar los SVGs de transición */
 #sections-container { overflow: visible; }
 
-/* Sección base con position relative para que los SVGs se posicionen bien */
+/* Sección base */
 .section { position: relative; }
-
-/* Secciones con transición SVG: padding extra para que el SVG no tape el contenido */
-.section[style*="overflow: hidden"] {
-  padding-bottom: calc(var(--section-padding-y, 5rem) + 60px);
-}
 
 /* ============================================================
    EFECTOS DE MOVIMIENTO
