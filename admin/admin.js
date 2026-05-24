@@ -521,6 +521,7 @@ function openSectionModal(section) {
 
   // Inicializar campo de transición
   f.bottom_transition.value = section.bottom_transition || 'none';
+  f.motion_effect.value = section.motion_effect || 'none';
 
   // Campos de contenido según el tipo
   const fieldsEl = $('#section-content-fields');
@@ -695,6 +696,7 @@ $('#section-modal form').addEventListener('submit', async e => {
     min_height: f.min_height.value !== '' && Number(f.min_height.value) > 0 ? Number(f.min_height.value) : null,
     bg_overlay: Number(f.bg_overlay.value) || 0,
     bottom_transition: f.bottom_transition.value || 'none',
+    motion_effect: f.motion_effect.value || 'none',
     content
   };
 

@@ -318,6 +318,32 @@
               </select>
               <small>El color de la transición toma el fondo de la sección siguiente.</small>
             </label>
+
+            <label class="full">
+              <span>Efecto de movimiento</span>
+              <select name="motion_effect">
+                <option value="none">— Sin efecto</option>
+                <optgroup label="Entrada al hacer scroll">
+                  <option value="fade-up">↑ Aparecer subiendo</option>
+                  <option value="fade-down">↓ Aparecer bajando</option>
+                  <option value="fade-left">← Aparecer desde la izquierda</option>
+                  <option value="fade-right">→ Aparecer desde la derecha</option>
+                  <option value="zoom-in">⊕ Zoom de entrada</option>
+                  <option value="zoom-out">⊖ Zoom de salida</option>
+                  <option value="flip-up">↻ Voltear hacia arriba</option>
+                </optgroup>
+                <optgroup label="Fondo">
+                  <option value="parallax">⛰ Parallax (fondo lento)</option>
+                  <option value="parallax-fast">⛰⛰ Parallax rápido</option>
+                  <option value="zoom-bg">🔍 Zoom lento del fondo</option>
+                </optgroup>
+                <optgroup label="Contenido">
+                  <option value="float">〰 Flotación suave</option>
+                  <option value="pulse-soft">○ Pulso suave</option>
+                </optgroup>
+              </select>
+              <small>Los efectos de fondo requieren imagen de fondo cargada.</small>
+            </label>
           </div>
         </fieldset>
 
