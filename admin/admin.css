@@ -109,6 +109,7 @@ input, select, textarea, button { font: inherit; }
   min-height: 100vh;
   display: grid; place-items: center;
   padding: 2rem;
+  background: var(--bg);
 }
 .auth__form {
   background: var(--surface);
@@ -117,6 +118,10 @@ input, select, textarea, button { font: inherit; }
   box-shadow: var(--shadow-lg);
   width: 100%; max-width: 400px;
   display: flex; flex-direction: column; gap: 1rem;
+  border: 1px solid var(--border);
+}
+[data-theme="dark"] .auth__form {
+  border-color: var(--border);
 }
 .auth__form h1 { font-size: 1.5rem; }
 .auth__subtitle { color: var(--muted); margin: 0 0 0.5rem; }
@@ -393,7 +398,7 @@ textarea { resize: vertical; min-height: 80px; }
   padding: 4rem;
 }
 
-/* ===== Modal ===== */
+/* ===== Modal — hereda tema correctamente ===== */
 .modal {
   border: none;
   border-radius: var(--radius);
@@ -401,27 +406,72 @@ textarea { resize: vertical; min-height: 80px; }
   max-width: 640px;
   width: 90vw;
   box-shadow: var(--shadow-lg);
+  /* Forzar herencia de variables del tema */
+  background: var(--surface);
+  color: var(--text);
 }
-.modal::backdrop { background: rgba(0,0,0,0.5); }
+/* El dialog nativo no hereda data-theme — se lo forzamos */
+[data-theme="dark"] .modal {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+[data-theme="dark"] .modal input,
+[data-theme="dark"] .modal select,
+[data-theme="dark"] .modal textarea {
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+[data-theme="dark"] .modal label > span,
+[data-theme="dark"] .modal label small,
+[data-theme="dark"] .modal fieldset legend {
+  color: var(--muted);
+}
+[data-theme="dark"] .modal fieldset {
+  border-color: var(--border);
+}
+[data-theme="dark"] .modal__footer {
+  background: var(--bg);
+  border-color: var(--border);
+}
+[data-theme="dark"] .modal__header {
+  border-color: var(--border);
+}
+[data-theme="dark"] .modal__close { color: var(--muted); }
+[data-theme="dark"] .modal__close:hover { color: var(--text); background: var(--border); border-radius: 4px; }
+
+.modal::backdrop { background: rgba(0,0,0,0.6); }
 .modal__form { display: flex; flex-direction: column; max-height: 85vh; }
 .modal__header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 .modal__close {
   background: transparent; border: none; font-size: 1.5rem;
   cursor: pointer; color: var(--muted); width: 32px; height: 32px;
+  border-radius: 4px; transition: background 0.15s, color 0.15s;
 }
-.modal__body { padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+.modal__body {
+  padding: 1.5rem; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1.5rem;
+  background: var(--surface);
+}
 .modal__footer {
   display: flex; justify-content: flex-end; gap: 0.5rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
   background: var(--bg);
 }
-fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
-fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; }
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: transparent;
+}
+fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: var(--muted); }
 
 .checkbox { flex-direction: row; align-items: center; gap: 0.5rem; }
 .checkbox input { width: auto; }

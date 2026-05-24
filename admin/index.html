@@ -328,7 +328,22 @@
               <small>0 = nítido · 20 = muy difuminado</small>
             </label>
             <label class="full">
-              <span>Transición inferior (borde entre secciones)</span>
+              <span>Transición superior (borde de arriba)</span>
+              <select name="top_transition">
+                <option value="none">— Sin efecto</option>
+                <option value="curve-down">⌒ Curva hacia abajo</option>
+                <option value="curve-up">⌣ Curva hacia arriba</option>
+                <option value="wave">〜 Ola</option>
+                <option value="wave-double">≋ Ola doble</option>
+                <option value="slant-right">╱ Diagonal derecha</option>
+                <option value="slant-left">╲ Diagonal izquierda</option>
+                <option value="triangle">▽ Triángulo</option>
+                <option value="zigzag">⩕ Zigzag</option>
+              </select>
+              <small>Se renderiza sobre el borde superior de esta sección.</small>
+            </label>
+            <label class="full">
+              <span>Transición inferior (borde de abajo)</span>
               <select name="bottom_transition">
                 <option value="none">— Sin efecto</option>
                 <option value="curve-down">⌒ Curva hacia abajo</option>
@@ -340,7 +355,7 @@
                 <option value="triangle">▽ Triángulo</option>
                 <option value="zigzag">⩕ Zigzag</option>
               </select>
-              <small>El color de la transición toma el fondo de la sección siguiente.</small>
+              <small>El color toma el fondo de la sección siguiente.</small>
             </label>
 
             <label class="full">
