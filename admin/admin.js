@@ -41,95 +41,116 @@ function loadGoogleFont(fontName) {
   document.head.appendChild(link);
 }
 
+// ── Un único listener global para cerrar pickers ──
+document.addEventListener('click', e => {
+  document.querySelectorAll('.font-picker').forEach(p => {
+    if (!p.contains(e.target)) {
+      p.querySelector('.font-picker__list').hidden = true;
+      p.querySelector('.font-picker__trigger').classList.remove('is-open');
+    }
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.font-picker').forEach(p => {
+      p.querySelector('.font-picker__list').hidden = true;
+      p.querySelector('.font-picker__trigger').classList.remove('is-open');
+    });
+  }
+});
+
+function buildFontPickerList(picker) {
+  const type = picker.dataset.type || 'heading';
+  const allowInherit = picker.dataset.allowInherit === 'true';
+  const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
+  const input = picker.querySelector('input[type="hidden"]');
+  const list = picker.querySelector('.font-picker__list');
+
+  list.innerHTML = '';
+
+  if (allowInherit) {
+    const li = document.createElement('li');
+    li.className = 'font-picker__option font-picker__option--inherit';
+    li.dataset.font = '';
+    li.innerHTML = `<span class="font-picker__option-name" style="font-style:italic">Heredar del tema</span>
+      <span class="font-picker__option-sample" style="font-style:italic;color:var(--muted)">— global —</span>`;
+    if (input.value === '') li.classList.add('is-selected');
+    list.appendChild(li);
+  }
+
+  fonts.forEach(font => {
+    loadGoogleFont(font);
+    const li = document.createElement('li');
+    li.className = 'font-picker__option';
+    li.dataset.font = font;
+    li.innerHTML = `<span class="font-picker__option-name">${font}</span>
+      <span class="font-picker__option-sample" style="font-family:'${font}',serif">${FONT_SAMPLES[type] || 'Aa'}</span>`;
+    if (font === input.value) li.classList.add('is-selected');
+    list.appendChild(li);
+  });
+
+  // Click en opción — delegado en la lista
+  list.addEventListener('click', e => {
+    const li = e.target.closest('.font-picker__option');
+    if (!li) return;
+    applyFontPickerValue(picker, li.dataset.font);
+    list.hidden = true;
+    picker.querySelector('.font-picker__trigger').classList.remove('is-open');
+  });
+}
+
+function applyFontPickerValue(picker, font) {
+  const input = picker.querySelector('input[type="hidden"]');
+  const preview = picker.querySelector('.font-picker__preview');
+  input.value = font || '';
+  if (font) {
+    preview.textContent = font;
+    preview.style.fontFamily = `'${font}', serif`;
+    preview.style.fontStyle = '';
+    preview.style.color = '';
+  } else {
+    preview.textContent = '— Heredar del tema —';
+    preview.style.fontFamily = '';
+    preview.style.fontStyle = 'italic';
+    preview.style.color = 'var(--muted)';
+  }
+  picker.querySelectorAll('.font-picker__option').forEach(opt => {
+    opt.classList.toggle('is-selected', (opt.dataset.font || '') === (font || ''));
+  });
+}
+
 function initFontPickers(container = document) {
   container.querySelectorAll('.font-picker').forEach(picker => {
     if (picker.dataset.initialized) return;
     picker.dataset.initialized = 'true';
 
-    const type = picker.dataset.type || 'heading';
-    const allowInherit = picker.dataset.allowInherit === 'true';
-    const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
     const input = picker.querySelector('input[type="hidden"]');
     const trigger = picker.querySelector('.font-picker__trigger');
-    const preview = picker.querySelector('.font-picker__preview');
     const list = picker.querySelector('.font-picker__list');
 
-    function buildList() {
-      if (list.children.length) return;
-      if (allowInherit) {
-        const li = document.createElement('li');
-        li.className = 'font-picker__option font-picker__option--inherit';
-        li.dataset.font = '';
-        li.innerHTML = `
-          <span class="font-picker__option-name" style="font-style:italic">Heredar del tema</span>
-          <span class="font-picker__option-sample" style="font-style:italic;color:var(--muted)">— global —</span>`;
-        if (input.value === '') li.classList.add('is-selected');
-        li.addEventListener('click', () => selectFont(''));
-        list.appendChild(li);
-      }
-      fonts.forEach(font => {
-        loadGoogleFont(font);
-        const li = document.createElement('li');
-        li.className = 'font-picker__option';
-        li.dataset.font = font;
-        li.innerHTML = `
-          <span class="font-picker__option-name">${font}</span>
-          <span class="font-picker__option-sample" style="font-family:'${font}',serif">
-            ${FONT_SAMPLES[type] || 'Aa'}
-          </span>`;
-        if (font === input.value) li.classList.add('is-selected');
-        li.addEventListener('click', () => selectFont(font));
-        list.appendChild(li);
-      });
-    }
+    // Construir lista inmediatamente
+    buildFontPickerList(picker);
 
-    // Precargar lista inmediatamente (sin mostrarla)
-    buildList();
+    // Aplicar valor actual al trigger
+    applyFontPickerValue(picker, input.value || '');
 
-    function selectFont(font) {
-      input.value = font;
-      if (font) {
-        preview.textContent = font;
-        preview.style.fontFamily = `'${font}', serif`;
-        preview.style.fontStyle = '';
-        preview.style.color = '';
-      } else {
-        preview.textContent = '— Heredar del tema —';
-        preview.style.fontFamily = '';
-        preview.style.fontStyle = 'italic';
-        preview.style.color = 'var(--muted)';
-      }
-      list.querySelectorAll('.font-picker__option').forEach(opt => {
-        opt.classList.toggle('is-selected', opt.dataset.font === font);
-      });
-      closeList();
-    }
-
-    function openList() {
-      list.hidden = false;
-      trigger.classList.add('is-open');
-      const selected = list.querySelector('.is-selected');
-      if (selected) selected.scrollIntoView({ block: 'nearest' });
-    }
-    function closeList() {
-      list.hidden = true;
-      trigger.classList.remove('is-open');
-    }
     trigger.addEventListener('click', e => {
       e.stopPropagation();
-      list.hidden ? openList() : closeList();
+      // Cerrar otros pickers abiertos
+      document.querySelectorAll('.font-picker').forEach(p => {
+        if (p !== picker) {
+          p.querySelector('.font-picker__list').hidden = true;
+          p.querySelector('.font-picker__trigger').classList.remove('is-open');
+        }
+      });
+      const isOpen = !list.hidden;
+      list.hidden = isOpen;
+      trigger.classList.toggle('is-open', !isOpen);
+      if (!isOpen) {
+        const selected = list.querySelector('.is-selected');
+        if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 10);
+      }
     });
-    document.addEventListener('click', e => { if (!picker.contains(e.target)) closeList(); });
-    picker.addEventListener('keydown', e => { if (e.key === 'Escape') closeList(); });
-
-    const currentFont = input.value;
-    if (currentFont) {
-      loadGoogleFont(currentFont);
-      preview.textContent = currentFont;
-      preview.style.fontFamily = `'${currentFont}', serif`;
-      preview.style.fontStyle = '';
-      preview.style.color = '';
-    }
   });
 }
 
@@ -137,25 +158,10 @@ function setFontPickerValue(container, fieldName, fontValue) {
   const picker = container.querySelector(`.font-picker[data-name="${fieldName}"]`);
   if (!picker) return;
   const input = picker.querySelector('input[type="hidden"]');
-  const preview = picker.querySelector('.font-picker__preview');
   if (input) input.value = fontValue || '';
-  if (preview) {
-    if (fontValue) {
-      loadGoogleFont(fontValue);
-      preview.textContent = fontValue;
-      preview.style.fontFamily = `'${fontValue}', serif`;
-      preview.style.fontStyle = '';
-      preview.style.color = '';
-    } else {
-      preview.textContent = '— Heredar del tema —';
-      preview.style.fontFamily = '';
-      preview.style.fontStyle = 'italic';
-      preview.style.color = 'var(--muted)';
-    }
-  }
-  picker.querySelectorAll('.font-picker__option').forEach(opt => {
-    opt.classList.toggle('is-selected', opt.dataset.font === (fontValue || ''));
-  });
+  // Reconstruir lista con el nuevo valor seleccionado
+  buildFontPickerList(picker);
+  applyFontPickerValue(picker, fontValue || '');
 }
 
 // ============================================================
@@ -608,6 +614,8 @@ function sectionLabel(type) {
     calendar: 'Calendario',
     gallery: 'Galería',
     location: 'Ubicación',
+    info:     'Info (columnas)',
+    gift:     'Regalo / Alias',
   })[type] || type;
 }
 
@@ -675,7 +683,9 @@ function defaultContentFor(type) {
     rsvp:      { title: 'Confirma tu asistencia', subtitle: '', button_text: 'Confirmar' },
     calendar:  { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 },
     gallery:   { title: 'Galería', subtitle: '' },
-    location:  { eyebrow: '¿Dónde?', title: '', address: '', map_height: 380, map_height_mobile: 260 }
+    location:  { eyebrow: '¿Dónde?', title: '', address: '', map_height: 380, map_height_mobile: 260 },
+    info:      { title: '', subtitle: '', columns: [] },
+    gift:      { title: 'Regalo', subtitle: '', columns: [] }
   })[type] || {};
 }
 
@@ -690,20 +700,12 @@ function openSectionModal(section) {
   // Color pickers: usar valor guardado o blanco como fallback (no negro)
   f.background_color.value = section.background_color || '#ffffff';
   f.text_color.value = section.text_color || '#1a1a1a';
-  // Resetear font-pickers del modal antes de reinicializar
+  // Resetear y reinicializar font-pickers del modal
   modal.querySelectorAll('.font-picker').forEach(p => {
     delete p.dataset.initialized;
-    const list = p.querySelector('.font-picker__list');
-    list.innerHTML = '';
-    list.hidden = true;
-    p.querySelector('.font-picker__trigger').classList.remove('is-open');
   });
-
-  // Setear valores de fuente
   setFontPickerValue(modal, 'heading_font', section.heading_font || '');
   setFontPickerValue(modal, 'body_font', section.body_font || '');
-
-  // Inicializar pickers del modal (buildList se llama internamente)
   initFontPickers(modal);
   f.font_size.value = section.font_size || '';
   f.padding_y.value = section.padding_y ?? 80;
@@ -732,7 +734,71 @@ function openSectionModal(section) {
         <textarea name="content_${field.key}" rows="2">${escapeHtml(section.content?.[field.key] || '')}</textarea>
         ${field.help ? `<small>${field.help}</small>` : ''}
       `;
-    } else if (field.type === 'select') {
+    } else if (field.type === 'columns_editor') {
+      label.className = 'full';
+      const cols = section.content?.columns || [];
+      label.innerHTML = `<span>${field.label}</span>`;
+      const editorWrap = document.createElement('div');
+      editorWrap.className = 'columns-editor';
+      editorWrap.dataset.fieldKey = '__columns';
+
+      function renderColEditor() {
+        editorWrap.innerHTML = '';
+        const currentCols = JSON.parse(editorWrap.dataset.cols || '[]');
+        currentCols.forEach((col, i) => {
+          const colDiv = document.createElement('div');
+          colDiv.className = 'col-editor-item';
+          colDiv.innerHTML = `<div class="col-editor-header">
+            <span>Columna ${i+1}</span>
+            <button type="button" class="link-btn col-remove" data-idx="${i}">Eliminar</button>
+          </div>`;
+          field.columnFields.forEach(cf => {
+            const colLabel = document.createElement('label');
+            colLabel.className = cf.type === 'checkbox' ? 'checkbox' : '';
+            if (cf.type === 'checkbox') {
+              colLabel.innerHTML = `<input type="checkbox" data-col="${i}" data-cfield="${cf.key}" ${col[cf.key] ? 'checked' : ''}/><span>${cf.label}</span>`;
+            } else {
+              colLabel.innerHTML = `<span>${cf.label}</span><input type="text" data-col="${i}" data-cfield="${cf.key}" value="${escapeHtml(col[cf.key] || '')}" placeholder="${cf.placeholder || ''}"/>`;
+            }
+            colDiv.appendChild(colLabel);
+          });
+          editorWrap.appendChild(colDiv);
+        });
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn btn--ghost btn--sm';
+        addBtn.textContent = '+ Agregar columna';
+        addBtn.onclick = () => {
+          const c = JSON.parse(editorWrap.dataset.cols || '[]');
+          c.push({});
+          editorWrap.dataset.cols = JSON.stringify(c);
+          renderColEditor();
+        };
+        editorWrap.appendChild(addBtn);
+        // Remove handlers
+        editorWrap.querySelectorAll('.col-remove').forEach(btn => {
+          btn.onclick = () => {
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            c.splice(Number(btn.dataset.idx), 1);
+            editorWrap.dataset.cols = JSON.stringify(c);
+            renderColEditor();
+          };
+        });
+        // Input change handlers
+        editorWrap.querySelectorAll('[data-col]').forEach(inp => {
+          inp.addEventListener('change', () => {
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            const idx = Number(inp.dataset.col);
+            const fkey = inp.dataset.cfield;
+            c[idx][fkey] = inp.type === 'checkbox' ? inp.checked : inp.value;
+            editorWrap.dataset.cols = JSON.stringify(c);
+          });
+        });
+      }
+
+      editorWrap.dataset.cols = JSON.stringify(cols);
+      renderColEditor();
+      label.appendChild(editorWrap);
       const opts = field.options.map(o =>
         `<option value="${o.value}" ${section.content?.[field.key] === o.value ? 'selected' : ''}>${o.label}</option>`
       ).join('');
@@ -866,6 +932,33 @@ function contentFieldsFor(type) {
         help: 'Altura en desktop. Default: 380px' },
       { key: 'map_height_mobile', label: 'Altura mapa mobile (px)', type: 'number', min: 150, max: 500,
         help: 'Altura en mobile. Default: 260px' },
+    ],
+    info: [
+      { key: 'title', label: 'Título (opcional)', full: true },
+      { key: 'subtitle', label: 'Subtítulo (opcional)', full: true },
+      { key: '__columns_editor', label: 'Columnas', type: 'columns_editor', full: true,
+        columnFields: [
+          { key: 'icon',  label: 'Emoji / ícono', placeholder: '👗' },
+          { key: 'label', label: 'Label pequeño', placeholder: 'DRESS CODE' },
+          { key: 'title', label: 'Título grande', placeholder: 'Elegante' },
+          { key: 'text',  label: 'Texto descriptivo', placeholder: 'Colores claros y azul' },
+        ]
+      }
+    ],
+    gift: [
+      { key: 'title', label: 'Título de la sección', full: true },
+      { key: 'subtitle', label: 'Subtítulo', full: true },
+      { key: '__columns_editor', label: 'Columnas', type: 'columns_editor', full: true,
+        columnFields: [
+          { key: 'icon',        label: 'Emoji / ícono', placeholder: '🎁' },
+          { key: 'label',       label: 'Label pequeño', placeholder: 'REGALO' },
+          { key: 'title',       label: 'Título', placeholder: 'Tu presencia es lo más importante' },
+          { key: 'text',        label: 'Texto', placeholder: 'Pero si deseás hacerme un regalo...' },
+          { key: 'alias',       label: 'Alias (ej: juliaa.santos)', placeholder: '' },
+          { key: 'mp_redirect', label: 'Redirigir a Mercado Pago', type: 'checkbox' },
+          { key: 'mp_alias',    label: 'Alias de Mercado Pago (para link directo)', placeholder: 'juliaa.santos' },
+        ]
+      }
     ]
   })[type] || [];
 }
@@ -902,7 +995,11 @@ $('#section-modal form').addEventListener('submit', async e => {
       }
     }
   }
-  // Checkboxes no aparecen en FormData si no están marcados
+  // Leer columnas de columns_editor si existe
+  const colsEditor = modal.querySelector('.columns-editor');
+  if (colsEditor) {
+    content.columns = JSON.parse(colsEditor.dataset.cols || '[]');
+  }
   const checkboxFields = ['show_ics'];
   checkboxFields.forEach(k => {
     const el = f.querySelector(`[name="content_${k}"]`);
@@ -1128,7 +1225,7 @@ $('#delete-btn').addEventListener('click', async () => {
 // ============================================================
 // SHORT LINKS
 // ============================================================
-const SHORT_BASE = `${window.location.origin}/s`;
+const SHORT_BASE = 'https://vylo-short-links.ezmezdev.workers.dev/s';
 
 async function loadLinks() {
   const inv = state.currentInvitation;

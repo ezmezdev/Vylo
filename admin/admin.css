@@ -690,3 +690,18 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
   font-style: italic;
   font-family: 'Inter', sans-serif !important;
 }
+
+/* ===== Editor de columnas ===== */
+.columns-editor { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+.col-editor-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.875rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  background: var(--bg);
+}
+.col-editor-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; font-size: 13px; margin-bottom: 0.25rem;
+}
+.col-remove { color: var(--danger) !important; }
