@@ -19,6 +19,9 @@ console.log('[Admin] Cliente Supabase creado OK');
 document.addEventListener('DOMContentLoaded', function() {
 console.log('[Admin] DOM listo, iniciando...');
 
+// Inicializar font-pickers
+initFontPickers();
+
 // Inicializar modo oscuro
 initDarkMode();
 
@@ -69,7 +72,155 @@ function localToIso(local) {
 }
 
 // ============================================================
-// MODO OSCURO — persiste en localStorage
+// FONT PICKER — selector de tipografías con preview visual
+// ============================================================
+const HEADING_FONTS = [
+  'Cormorant Garamond',
+  'Playfair Display',
+  'DM Serif Display',
+  'Bodoni Moda',
+  'Italiana',
+  'Cinzel',
+  'Marcellus',
+  'Great Vibes',
+  'Dancing Script',
+  'Allura',
+  'Pinyon Script',
+  'Libre Baskerville',
+  'Lora',
+  'Merriweather',
+];
+
+const BODY_FONTS = [
+  'Manrope',
+  'Inter',
+  'Lato',
+  'Montserrat',
+  'Nunito Sans',
+  'Karla',
+  'Work Sans',
+  'Poppins',
+  'Raleway',
+  'Open Sans',
+];
+
+const FONT_SAMPLES = {
+  heading: 'Aa Bb',
+  body: 'Texto de ejemplo'
+};
+
+/** Carga una fuente de Google Fonts si no está ya cargada */
+const loadedFonts = new Set();
+function loadGoogleFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+  loadedFonts.add(fontName);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, '+')}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+/** Inicializa todos los font-pickers en un contenedor dado */
+function initFontPickers(container = document) {
+  container.querySelectorAll('.font-picker').forEach(picker => {
+    const type = picker.dataset.type || 'heading';
+    const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
+    const input = picker.querySelector('input[type="hidden"]');
+    const trigger = picker.querySelector('.font-picker__trigger');
+    const preview = picker.querySelector('.font-picker__preview');
+    const list = picker.querySelector('.font-picker__list');
+
+    // Precargar fuentes visibles al abrir
+    let fontsPreloaded = false;
+
+    // Construir lista de opciones
+    function buildList() {
+      if (list.children.length) return; // ya construida
+      fonts.forEach(font => {
+        loadGoogleFont(font);
+        const li = document.createElement('li');
+        li.className = 'font-picker__option';
+        li.dataset.font = font;
+        li.innerHTML = `
+          <span class="font-picker__option-name">${font}</span>
+          <span class="font-picker__option-sample"
+                style="font-family:'${font}',serif">
+            ${FONT_SAMPLES[type] || 'Aa'}
+          </span>
+        `;
+        if (font === input.value) li.classList.add('is-selected');
+        li.addEventListener('click', () => selectFont(font));
+        list.appendChild(li);
+      });
+    }
+
+    function selectFont(font) {
+      input.value = font;
+      preview.textContent = font;
+      preview.style.fontFamily = `'${font}', serif`;
+      // Actualizar estado selected en lista
+      list.querySelectorAll('.font-picker__option').forEach(opt => {
+        opt.classList.toggle('is-selected', opt.dataset.font === font);
+      });
+      closeList();
+    }
+
+    function openList() {
+      buildList();
+      list.hidden = false;
+      trigger.classList.add('is-open');
+      // Hacer scroll al seleccionado
+      const selected = list.querySelector('.is-selected');
+      if (selected) selected.scrollIntoView({ block: 'nearest' });
+    }
+
+    function closeList() {
+      list.hidden = true;
+      trigger.classList.remove('is-open');
+    }
+
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      list.hidden ? openList() : closeList();
+    });
+
+    // Cerrar al hacer click fuera
+    document.addEventListener('click', e => {
+      if (!picker.contains(e.target)) closeList();
+    });
+
+    // Cerrar con Escape
+    picker.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeList();
+    });
+
+    // Aplicar fuente actual al trigger desde el inicio
+    const currentFont = input.value;
+    if (currentFont) {
+      loadGoogleFont(currentFont);
+      preview.textContent = currentFont;
+      preview.style.fontFamily = `'${currentFont}', serif`;
+    }
+  });
+}
+
+/** Actualiza el valor mostrado en un font-picker por nombre de campo */
+function setFontPickerValue(container, fieldName, fontValue) {
+  const picker = container.querySelector(`.font-picker[data-name="${fieldName}"]`);
+  if (!picker) return;
+  const input = picker.querySelector('input[type="hidden"]');
+  const preview = picker.querySelector('.font-picker__preview');
+  if (input) input.value = fontValue || '';
+  if (preview && fontValue) {
+    loadGoogleFont(fontValue);
+    preview.textContent = fontValue;
+    preview.style.fontFamily = `'${fontValue}', serif`;
+  }
+  // Actualizar seleccionado en lista si ya fue construida
+  picker.querySelectorAll('.font-picker__option').forEach(opt => {
+    opt.classList.toggle('is-selected', opt.dataset.font === fontValue);
+  });
+}
 // ============================================================
 function initDarkMode() {
   const saved = localStorage.getItem('vylo-theme') || 'light';
@@ -337,14 +488,6 @@ function fillGeneralForm() {
   f.rsvp_form_url.value = inv.rsvp_form_url || '';
   f.calendar_location.value = inv.calendar_location || '';
   f.calendar_description.value = inv.calendar_description || '';
-
-  const preview = $('#hero-preview');
-  if (inv.hero_image_url) {
-    preview.src = storageUrl(inv.hero_image_url);
-    preview.hidden = false;
-  } else {
-    preview.hidden = true;
-  }
 }
 
 $('#form-general').addEventListener('submit', async e => {
@@ -364,18 +507,6 @@ $('#form-general').addEventListener('submit', async e => {
     calendar_description: fd.get('calendar_description') || null
   };
 
-  // Subida de imagen hero si se eligió una
-  const heroFile = fd.get('hero_image');
-  if (heroFile && heroFile.size > 0) {
-    const ext = heroFile.name.split('.').pop();
-    const path = `${state.currentInvitation.id}/hero-${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage
-      .from(STORAGE_BUCKET)
-      .upload(path, heroFile, { upsert: true });
-    if (upErr) { toast(upErr.message, 'error'); return; }
-    update.hero_image_url = path;
-  }
-
   const { error } = await sb.from('invitations')
     .update(update).eq('id', state.currentInvitation.id);
   if (error) { toast(error.message, 'error'); return; }
@@ -394,9 +525,10 @@ function fillThemeForm() {
   f.primary_color.value = inv.primary_color;
   f.background_color.value = inv.background_color;
   f.accent_color.value = inv.accent_color;
-  f.heading_font.value = inv.heading_font;
-  f.body_font.value = inv.body_font;
   f.base_font_size.value = inv.base_font_size;
+  // Font pickers
+  setFontPickerValue(f, 'heading_font', inv.heading_font);
+  setFontPickerValue(f, 'body_font', inv.body_font);
 }
 
 $('#form-theme').addEventListener('submit', async e => {
@@ -942,18 +1074,6 @@ $('#delete-btn').addEventListener('click', async () => {
   $('#empty-state').hidden = false;
   await loadInvitations();
   toast('Invitación eliminada');
-});
-
-// Vista previa de foto hero al seleccionar
-$('#form-general [name="hero_image"]').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    $('#hero-preview').src = ev.target.result;
-    $('#hero-preview').hidden = false;
-  };
-  reader.readAsDataURL(file);
 });
 
 // ============================================================

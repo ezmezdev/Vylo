@@ -146,12 +146,6 @@
             </label>
 
             <label class="full">
-              <span>Foto principal (hero)</span>
-              <input type="file" name="hero_image" accept="image/*" />
-              <img id="hero-preview" class="img-preview" alt="" hidden />
-            </label>
-
-            <label class="full">
               <span>URL del Google Form (RSVP)</span>
               <input type="url" name="rsvp_form_url" placeholder="https://forms.gle/..." />
             </label>
@@ -188,33 +182,28 @@
               <input type="color" name="accent_color" />
             </label>
 
-            <label>
+            <label class="full">
               <span>Fuente de títulos</span>
-              <select name="heading_font">
-                <option>Cormorant Garamond</option>
-                <option>Playfair Display</option>
-                <option>DM Serif Display</option>
-                <option>Bodoni Moda</option>
-                <option>Italiana</option>
-                <option>Cinzel</option>
-                <option>Marcellus</option>
-                <option>Great Vibes</option>
-                <option>Dancing Script</option>
-                <option>Allura</option>
-              </select>
+              <div class="font-picker" data-name="heading_font" data-type="heading">
+                <button type="button" class="font-picker__trigger">
+                  <span class="font-picker__preview">Cormorant Garamond</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <input type="hidden" name="heading_font" value="Cormorant Garamond" />
+                <ul class="font-picker__list" hidden></ul>
+              </div>
             </label>
 
-            <label>
+            <label class="full">
               <span>Fuente del cuerpo</span>
-              <select name="body_font">
-                <option>Manrope</option>
-                <option>Inter</option>
-                <option>Lato</option>
-                <option>Montserrat</option>
-                <option>Nunito Sans</option>
-                <option>Karla</option>
-                <option>Work Sans</option>
-              </select>
+              <div class="font-picker" data-name="body_font" data-type="body">
+                <button type="button" class="font-picker__trigger">
+                  <span class="font-picker__preview">Manrope</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <input type="hidden" name="body_font" value="Manrope" />
+                <ul class="font-picker__list" hidden></ul>
+              </div>
             </label>
 
             <label>
