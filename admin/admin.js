@@ -573,7 +573,17 @@ function openSectionModal(section) {
   minHeightInput.value = section.min_height || '';
   overlayInput.value = section.bg_overlay ?? 0;
   overlayValue.textContent = overlayInput.value;
-  overlayInput.addEventListener('input', () => { overlayValue.textContent = overlayInput.value; });
+  overlayInput.addEventListener('input', () => {
+    overlayValue.textContent = Number(overlayInput.value).toFixed(2);
+  });
+
+  const blurInput = modal.querySelector('[name="bg_blur"]');
+  const blurValue = $('#bg-blur-value');
+  blurInput.value = section.bg_blur ?? 0;
+  blurValue.textContent = blurInput.value;
+  blurInput.addEventListener('input', () => {
+    blurValue.textContent = blurInput.value;
+  });
 
   if (section.bg_image_url) {
     bgPreview.src = storageUrl(section.bg_image_url);
@@ -695,6 +705,7 @@ $('#section-modal form').addEventListener('submit', async e => {
     padding_y: f.padding_y.value !== '' ? Number(f.padding_y.value) : 80,
     min_height: f.min_height.value !== '' && Number(f.min_height.value) > 0 ? Number(f.min_height.value) : null,
     bg_overlay: Number(f.bg_overlay.value) || 0,
+    bg_blur: Number(f.bg_blur.value) || 0,
     bottom_transition: f.bottom_transition.value || 'none',
     motion_effect: f.motion_effect.value || 'none',
     content
