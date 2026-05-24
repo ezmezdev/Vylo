@@ -16,11 +16,112 @@ console.log('[Admin] Conectando a Supabase:', SUPABASE_URL);
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('[Admin] Cliente Supabase creado OK');
 
-document.addEventListener('DOMContentLoaded', function() {
-console.log('[Admin] DOM listo, iniciando...');
+// ============================================================
+// FONT PICKER — selector de tipografías con preview visual
+// ============================================================
+const HEADING_FONTS = [
+  'Cormorant Garamond','Playfair Display','DM Serif Display',
+  'Bodoni Moda','Italiana','Cinzel','Marcellus',
+  'Great Vibes','Dancing Script','Allura','Pinyon Script',
+  'Libre Baskerville','Lora','Merriweather',
+];
+const BODY_FONTS = [
+  'Manrope','Inter','Lato','Montserrat','Nunito Sans',
+  'Karla','Work Sans','Poppins','Raleway','Open Sans',
+];
+const FONT_SAMPLES = { heading: 'Aa Bb', body: 'Texto de ejemplo' };
+const loadedFonts = new Set();
 
-// Inicializar font-pickers
-initFontPickers();
+function loadGoogleFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+  loadedFonts.add(fontName);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g,'+')}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+function initFontPickers(container = document) {
+  container.querySelectorAll('.font-picker').forEach(picker => {
+    const type = picker.dataset.type || 'heading';
+    const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
+    const input = picker.querySelector('input[type="hidden"]');
+    const trigger = picker.querySelector('.font-picker__trigger');
+    const preview = picker.querySelector('.font-picker__preview');
+    const list = picker.querySelector('.font-picker__list');
+
+    function buildList() {
+      if (list.children.length) return;
+      fonts.forEach(font => {
+        loadGoogleFont(font);
+        const li = document.createElement('li');
+        li.className = 'font-picker__option';
+        li.dataset.font = font;
+        li.innerHTML = `
+          <span class="font-picker__option-name">${font}</span>
+          <span class="font-picker__option-sample" style="font-family:'${font}',serif">
+            ${FONT_SAMPLES[type] || 'Aa'}
+          </span>`;
+        if (font === input.value) li.classList.add('is-selected');
+        li.addEventListener('click', () => selectFont(font));
+        list.appendChild(li);
+      });
+    }
+    function selectFont(font) {
+      input.value = font;
+      preview.textContent = font;
+      preview.style.fontFamily = `'${font}', serif`;
+      list.querySelectorAll('.font-picker__option').forEach(opt => {
+        opt.classList.toggle('is-selected', opt.dataset.font === font);
+      });
+      closeList();
+    }
+    function openList() {
+      buildList();
+      list.hidden = false;
+      trigger.classList.add('is-open');
+      const selected = list.querySelector('.is-selected');
+      if (selected) selected.scrollIntoView({ block: 'nearest' });
+    }
+    function closeList() {
+      list.hidden = true;
+      trigger.classList.remove('is-open');
+    }
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      list.hidden ? openList() : closeList();
+    });
+    document.addEventListener('click', e => { if (!picker.contains(e.target)) closeList(); });
+    picker.addEventListener('keydown', e => { if (e.key === 'Escape') closeList(); });
+
+    const currentFont = input.value;
+    if (currentFont) {
+      loadGoogleFont(currentFont);
+      preview.textContent = currentFont;
+      preview.style.fontFamily = `'${currentFont}', serif`;
+    }
+  });
+}
+
+function setFontPickerValue(container, fieldName, fontValue) {
+  const picker = container.querySelector(`.font-picker[data-name="${fieldName}"]`);
+  if (!picker) return;
+  const input = picker.querySelector('input[type="hidden"]');
+  const preview = picker.querySelector('.font-picker__preview');
+  if (input) input.value = fontValue || '';
+  if (preview && fontValue) {
+    loadGoogleFont(fontValue);
+    preview.textContent = fontValue;
+    preview.style.fontFamily = `'${fontValue}', serif`;
+  }
+  picker.querySelectorAll('.font-picker__option').forEach(opt => {
+    opt.classList.toggle('is-selected', opt.dataset.font === fontValue);
+  });
+}
+
+// ============================================================
+// MODO OSCURO — persiste en localStorage
+// ============================================================
 
 // Inicializar modo oscuro
 initDarkMode();
@@ -72,155 +173,7 @@ function localToIso(local) {
 }
 
 // ============================================================
-// FONT PICKER — selector de tipografías con preview visual
-// ============================================================
-const HEADING_FONTS = [
-  'Cormorant Garamond',
-  'Playfair Display',
-  'DM Serif Display',
-  'Bodoni Moda',
-  'Italiana',
-  'Cinzel',
-  'Marcellus',
-  'Great Vibes',
-  'Dancing Script',
-  'Allura',
-  'Pinyon Script',
-  'Libre Baskerville',
-  'Lora',
-  'Merriweather',
-];
-
-const BODY_FONTS = [
-  'Manrope',
-  'Inter',
-  'Lato',
-  'Montserrat',
-  'Nunito Sans',
-  'Karla',
-  'Work Sans',
-  'Poppins',
-  'Raleway',
-  'Open Sans',
-];
-
-const FONT_SAMPLES = {
-  heading: 'Aa Bb',
-  body: 'Texto de ejemplo'
-};
-
-/** Carga una fuente de Google Fonts si no está ya cargada */
-const loadedFonts = new Set();
-function loadGoogleFont(fontName) {
-  if (loadedFonts.has(fontName)) return;
-  loadedFonts.add(fontName);
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, '+')}:wght@400;700&display=swap`;
-  document.head.appendChild(link);
-}
-
-/** Inicializa todos los font-pickers en un contenedor dado */
-function initFontPickers(container = document) {
-  container.querySelectorAll('.font-picker').forEach(picker => {
-    const type = picker.dataset.type || 'heading';
-    const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
-    const input = picker.querySelector('input[type="hidden"]');
-    const trigger = picker.querySelector('.font-picker__trigger');
-    const preview = picker.querySelector('.font-picker__preview');
-    const list = picker.querySelector('.font-picker__list');
-
-    // Precargar fuentes visibles al abrir
-    let fontsPreloaded = false;
-
-    // Construir lista de opciones
-    function buildList() {
-      if (list.children.length) return; // ya construida
-      fonts.forEach(font => {
-        loadGoogleFont(font);
-        const li = document.createElement('li');
-        li.className = 'font-picker__option';
-        li.dataset.font = font;
-        li.innerHTML = `
-          <span class="font-picker__option-name">${font}</span>
-          <span class="font-picker__option-sample"
-                style="font-family:'${font}',serif">
-            ${FONT_SAMPLES[type] || 'Aa'}
-          </span>
-        `;
-        if (font === input.value) li.classList.add('is-selected');
-        li.addEventListener('click', () => selectFont(font));
-        list.appendChild(li);
-      });
-    }
-
-    function selectFont(font) {
-      input.value = font;
-      preview.textContent = font;
-      preview.style.fontFamily = `'${font}', serif`;
-      // Actualizar estado selected en lista
-      list.querySelectorAll('.font-picker__option').forEach(opt => {
-        opt.classList.toggle('is-selected', opt.dataset.font === font);
-      });
-      closeList();
-    }
-
-    function openList() {
-      buildList();
-      list.hidden = false;
-      trigger.classList.add('is-open');
-      // Hacer scroll al seleccionado
-      const selected = list.querySelector('.is-selected');
-      if (selected) selected.scrollIntoView({ block: 'nearest' });
-    }
-
-    function closeList() {
-      list.hidden = true;
-      trigger.classList.remove('is-open');
-    }
-
-    trigger.addEventListener('click', e => {
-      e.stopPropagation();
-      list.hidden ? openList() : closeList();
-    });
-
-    // Cerrar al hacer click fuera
-    document.addEventListener('click', e => {
-      if (!picker.contains(e.target)) closeList();
-    });
-
-    // Cerrar con Escape
-    picker.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeList();
-    });
-
-    // Aplicar fuente actual al trigger desde el inicio
-    const currentFont = input.value;
-    if (currentFont) {
-      loadGoogleFont(currentFont);
-      preview.textContent = currentFont;
-      preview.style.fontFamily = `'${currentFont}', serif`;
-    }
-  });
-}
-
-/** Actualiza el valor mostrado en un font-picker por nombre de campo */
-function setFontPickerValue(container, fieldName, fontValue) {
-  const picker = container.querySelector(`.font-picker[data-name="${fieldName}"]`);
-  if (!picker) return;
-  const input = picker.querySelector('input[type="hidden"]');
-  const preview = picker.querySelector('.font-picker__preview');
-  if (input) input.value = fontValue || '';
-  if (preview && fontValue) {
-    loadGoogleFont(fontValue);
-    preview.textContent = fontValue;
-    preview.style.fontFamily = `'${fontValue}', serif`;
-  }
-  // Actualizar seleccionado en lista si ya fue construida
-  picker.querySelectorAll('.font-picker__option').forEach(opt => {
-    opt.classList.toggle('is-selected', opt.dataset.font === fontValue);
-  });
-}
+// MODO OSCURO — persiste en localStorage
 // ============================================================
 function initDarkMode() {
   const saved = localStorage.getItem('vylo-theme') || 'light';
@@ -247,11 +200,21 @@ function applyThemeMode(mode) {
   }
 }
 
-// Aplicar antes de que el DOM esté listo para evitar flash
+// Aplicar antes del DOM para evitar flash
 (function() {
   const saved = localStorage.getItem('vylo-theme') || 'light';
   document.documentElement.setAttribute('data-theme', saved);
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+console.log('[Admin] DOM listo, iniciando...');
+
+// Inicializar font-pickers
+initFontPickers();
+
+// Inicializar modo oscuro
+initDarkMode();
+
 function showLogin() {
   console.log('[Admin] Mostrando login');
   document.getElementById('auth-view').removeAttribute('hidden');
