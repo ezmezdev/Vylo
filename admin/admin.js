@@ -919,8 +919,8 @@ $('#section-modal form').addEventListener('submit', async e => {
     is_enabled: f.is_enabled.checked,
     background_color: (bgColor && bgColor !== '#000000') || hasBgColorData ? (bgColor !== '#000000' ? bgColor : null) : null,
     text_color: (txtColor && txtColor !== '#000000') ? txtColor : null,
-    heading_font: f.heading_font.value.trim() || null,
-    body_font: f.body_font.value.trim() || null,
+    heading_font: fd.get('heading_font') || null,
+    body_font: fd.get('body_font') || null,
     font_size: f.font_size.value ? Number(f.font_size.value) : null,
     padding_y: f.padding_y.value !== '' ? Number(f.padding_y.value) : 80,
     min_height: f.min_height.value.trim() || null,
@@ -932,6 +932,7 @@ $('#section-modal form').addEventListener('submit', async e => {
     content
   };
 
+  console.log('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
   console.log('[Modal] Update a guardar:', update);
 
   // Quitar imagen de fondo
