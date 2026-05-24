@@ -477,12 +477,46 @@ function setupLightbox() {
 
 // ---- Renderizado principal ----
 
+function renderLocation(el, inv, content) {
+  const eyebrow = el.querySelector('[data-field="eyebrow"]');
+  eyebrow.textContent = content.eyebrow || '¿Dónde?';
+
+  el.querySelector('[data-field="title"]').textContent =
+    content.title || inv.calendar_location || 'Ubicación';
+
+  const addrEl = el.querySelector('[data-field="address"]');
+  const address = content.address || inv.calendar_location || '';
+  addrEl.textContent = address;
+
+  const mapHeight = content.map_height || 380;
+  const mapHeightMobile = content.map_height_mobile || Math.min(mapHeight, 260);
+  el.style.setProperty('--map-height', `${mapHeight}px`);
+  el.style.setProperty('--map-height-mobile', `${mapHeightMobile}px`);
+
+  const iframe = el.querySelector('[data-field="map-iframe"]');
+  if (content.map_url) {
+    iframe.src = content.map_url;
+  } else if (address) {
+    iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&z=15`;
+  } else {
+    el.querySelector('.location__map-wrap').hidden = true;
+  }
+
+  const dirLink = el.querySelector('[data-field="directions-link"]');
+  if (address) {
+    dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+  } else {
+    dirLink.hidden = true;
+  }
+}
+
 const RENDERERS = {
   hero: renderHero,
   countdown: renderCountdown,
   rsvp: renderRsvp,
   calendar: renderCalendar,
-  gallery: renderGallery
+  gallery: renderGallery,
+  location: renderLocation,
 };
 
 function renderSections({ invitation, sections, gallery }) {
