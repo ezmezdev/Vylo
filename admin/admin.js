@@ -566,7 +566,8 @@ function sectionLabel(type) {
     countdown: 'Contador regresivo',
     rsvp: 'Confirmación (RSVP)',
     calendar: 'Calendario',
-    gallery: 'Galería'
+    gallery: 'Galería',
+    location: 'Ubicación',
   })[type] || type;
 }
 
@@ -629,11 +630,12 @@ $$('.add-section__options button').forEach(btn => {
 
 function defaultContentFor(type) {
   return ({
-    hero: { subtitle: '', quote: '' },
+    hero:      { subtitle: '', quote: '' },
     countdown: { title: 'Cuenta regresiva', subtitle: '' },
-    rsvp: { title: 'Confirma tu asistencia', subtitle: '', button_text: 'Confirmar' },
-    calendar: { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 },
-    gallery: { title: 'Galería', subtitle: '' }
+    rsvp:      { title: 'Confirma tu asistencia', subtitle: '', button_text: 'Confirmar' },
+    calendar:  { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 },
+    gallery:   { title: 'Galería', subtitle: '' },
+    location:  { eyebrow: '¿Dónde?', title: '', address: '', map_height: 380, map_height_mobile: 260 }
   })[type] || {};
 }
 
@@ -799,6 +801,18 @@ function contentFieldsFor(type) {
         ],
         full: true
       }
+    ],
+    location: [
+      { key: 'eyebrow', label: 'Eyebrow (ej: ¿Dónde?)', full: true },
+      { key: 'title', label: 'Título (ej: nombre del salón)', full: true },
+      { key: 'address', label: 'Dirección completa', full: true,
+        help: 'Si se omite, usa la ubicación del calendario' },
+      { key: 'map_url', label: 'URL embed de Google Maps (opcional)', full: true,
+        help: 'En Google Maps → Compartir → Insertar mapa → copiá la URL del src del iframe. Si se omite, se genera automáticamente.' },
+      { key: 'map_height', label: 'Altura del mapa (px)', type: 'number', min: 200, max: 800,
+        help: 'Altura en desktop. Default: 380px' },
+      { key: 'map_height_mobile', label: 'Altura mapa mobile (px)', type: 'number', min: 150, max: 500,
+        help: 'Altura en mobile. Default: 260px' },
     ]
   })[type] || [];
 }
