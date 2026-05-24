@@ -33,6 +33,17 @@ function storageUrl(path) {
   return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
 }
 
+/** Carga una fuente de Google Fonts dinámicamente si no está ya cargada */
+const loadedSectionFonts = new Set();
+function loadSectionFont(fontName) {
+  if (!fontName || loadedSectionFonts.has(fontName)) return;
+  loadedSectionFonts.add(fontName);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g,'+')}:wght@300;400;500;600;700&display=swap`;
+  document.head.appendChild(link);
+}
+
 /** Carga dinámicamente fuentes de Google */
 function loadFonts(headingFont, bodyFont) {
   const fonts = new Set([headingFont, bodyFont].filter(Boolean));
@@ -112,8 +123,14 @@ function applyTheme(inv) {
 function applySectionStyles(el, section, nextSection) {
   if (section.background_color) el.style.setProperty('--section-bg', section.background_color);
   if (section.text_color)        el.style.setProperty('--section-color', section.text_color);
-  if (section.heading_font)      el.style.setProperty('--section-heading-font', `'${section.heading_font}'`);
-  if (section.body_font)         el.style.setProperty('--section-body-font', `'${section.body_font}'`);
+  if (section.heading_font) {
+    el.style.setProperty('--section-heading-font', `'${section.heading_font}', Georgia, serif`);
+    loadSectionFont(section.heading_font);
+  }
+  if (section.body_font) {
+    el.style.setProperty('--section-body-font', `'${section.body_font}', system-ui, sans-serif`);
+    loadSectionFont(section.body_font);
+  }
   if (section.font_size)         el.style.setProperty('--section-font-size', `${section.font_size}px`);
   if (section.padding_y != null) el.style.setProperty('--section-padding-y', `${section.padding_y}px`);
 
