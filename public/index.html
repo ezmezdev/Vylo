@@ -58,19 +58,24 @@
 
   <template id="tpl-hero">
     <section class="section section--hero" data-section="hero" aria-labelledby="hero-title">
-      <div class="hero__bg" aria-hidden="true"></div>
+      <!-- Imagen de fondo a pantalla completa -->
+      <div class="hero__bg-img" aria-hidden="true">
+        <img data-field="hero_image_bg" alt="" loading="eager" decoding="async" />
+      </div>
+      <!-- Overlay degradado -->
+      <div class="hero__overlay" aria-hidden="true"></div>
+      <!-- Contenido encima -->
       <div class="hero__content">
         <p class="hero__eyebrow" data-field="event_type"></p>
         <h1 class="hero__title" id="hero-title" data-field="host_names"></h1>
-        <p class="hero__subtitle" data-field="subtitle"></p>
-        <figure class="hero__photo">
-          <img data-field="hero_image" alt="" loading="eager" decoding="async" />
-        </figure>
+        <div class="hero__divider" aria-hidden="true"></div>
         <p class="hero__date" data-field="event_date"></p>
+        <p class="hero__subtitle" data-field="subtitle"></p>
         <blockquote class="hero__quote" data-field="quote"></blockquote>
-        <div class="hero__scroll" aria-hidden="true">
-          <span></span>
-        </div>
+      </div>
+      <!-- Indicador de scroll -->
+      <div class="hero__scroll" aria-hidden="true">
+        <span></span>
       </div>
     </section>
   </template>
