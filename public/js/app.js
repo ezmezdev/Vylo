@@ -248,22 +248,40 @@ function buildTransitionSVG(type, fillColor, position = 'bottom') {
 
 function applyMotionEffect(el, effect) {
   if (effect === 'parallax' || effect === 'parallax-fast') {
-    el.style.backgroundAttachment = 'fixed';
-    el.style.backgroundSize = 'cover';
-    el.style.backgroundPosition = 'center center';
-    const speed = effect === 'parallax-fast' ? 0.5 : 0.25;
-    el.dataset.parallaxSpeed = speed;
-    el.classList.add('has-parallax');
+    // El parallax se aplica al div interno de imagen, no al section
+    const bgDiv = el.querySelector('.section-bg-wrap div');
+    if (bgDiv) {
+      const speed = effect === 'parallax-fast' ? 0.6 : 0.3;
+      el.dataset.parallaxSpeed = speed;
+      el.classList.add('has-parallax');
+    } else {
+      // Sin imagen de fondo — aplicar al section directamente
+      el.style.backgroundAttachment = 'fixed';
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center center';
+      el.dataset.parallaxSpeed = effect === 'parallax-fast' ? 0.6 : 0.3;
+      el.classList.add('has-parallax');
+    }
+
   } else if (effect === 'zoom-bg') {
+    // Zoom en el div interno de imagen
+    const bgDiv = el.querySelector('.section-bg-wrap div');
+    if (bgDiv) {
+      bgDiv.style.animation = 'zoom-bg-anim 14s ease-in-out infinite alternate';
+      bgDiv.style.inset = '-8%';
+    }
     el.classList.add('motion-zoom-bg');
+
   } else if (effect === 'float') {
     const inner = el.querySelector('.section__inner') || el;
     inner.classList.add('motion-float');
+
   } else if (effect === 'pulse-soft') {
     const inner = el.querySelector('.section__inner') || el;
     inner.classList.add('motion-pulse');
+
   } else {
-    // Efectos de entrada — agregar has-reveal + clase específica
+    // Efectos de entrada al scroll
     el.classList.add('has-reveal', 'motion-entry', `motion-${effect}`);
     el.style.opacity = '0';
   }
@@ -594,9 +612,15 @@ function renderSections({ invitation, sections, gallery }) {
     const handleParallax = () => {
       parallaxSections.forEach(el => {
         const rect = el.getBoundingClientRect();
-        const speed = parseFloat(el.dataset.parallaxSpeed) || 0.25;
+        const speed = parseFloat(el.dataset.parallaxSpeed) || 0.3;
         const offset = (rect.top * speed).toFixed(2);
-        el.style.backgroundPositionY = `calc(50% + ${offset}px)`;
+        // Intentar mover el div interno primero
+        const bgDiv = el.querySelector('.section-bg-wrap div');
+        if (bgDiv) {
+          bgDiv.style.transform = `translateY(${offset}px)`;
+        } else {
+          el.style.backgroundPositionY = `calc(50% + ${offset}px)`;
+        }
       });
     };
     window.addEventListener('scroll', handleParallax, { passive: true });
