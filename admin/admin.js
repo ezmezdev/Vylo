@@ -43,7 +43,12 @@ function loadGoogleFont(fontName) {
 
 function initFontPickers(container = document) {
   container.querySelectorAll('.font-picker').forEach(picker => {
+    // Evitar doble inicialización
+    if (picker.dataset.initialized) return;
+    picker.dataset.initialized = 'true';
+
     const type = picker.dataset.type || 'heading';
+    const allowInherit = picker.dataset.allowInherit === 'true';
     const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
     const input = picker.querySelector('input[type="hidden"]');
     const trigger = picker.querySelector('.font-picker__trigger');
@@ -52,6 +57,18 @@ function initFontPickers(container = document) {
 
     function buildList() {
       if (list.children.length) return;
+      // Opción heredar (solo en secciones)
+      if (allowInherit) {
+        const li = document.createElement('li');
+        li.className = 'font-picker__option font-picker__option--inherit';
+        li.dataset.font = '';
+        li.innerHTML = `
+          <span class="font-picker__option-name" style="font-style:italic">Heredar del tema</span>
+          <span class="font-picker__option-sample" style="font-style:italic;color:var(--muted)">— global —</span>`;
+        if (input.value === '') li.classList.add('is-selected');
+        li.addEventListener('click', () => selectFont(''));
+        list.appendChild(li);
+      }
       fonts.forEach(font => {
         loadGoogleFont(font);
         const li = document.createElement('li');
@@ -67,15 +84,26 @@ function initFontPickers(container = document) {
         list.appendChild(li);
       });
     }
+
     function selectFont(font) {
       input.value = font;
-      preview.textContent = font;
-      preview.style.fontFamily = `'${font}', serif`;
+      if (font) {
+        preview.textContent = font;
+        preview.style.fontFamily = `'${font}', serif`;
+        preview.style.fontStyle = '';
+        preview.style.color = '';
+      } else {
+        preview.textContent = '— Heredar del tema —';
+        preview.style.fontFamily = '';
+        preview.style.fontStyle = 'italic';
+        preview.style.color = 'var(--muted)';
+      }
       list.querySelectorAll('.font-picker__option').forEach(opt => {
         opt.classList.toggle('is-selected', opt.dataset.font === font);
       });
       closeList();
     }
+
     function openList() {
       buildList();
       list.hidden = false;
@@ -94,11 +122,14 @@ function initFontPickers(container = document) {
     document.addEventListener('click', e => { if (!picker.contains(e.target)) closeList(); });
     picker.addEventListener('keydown', e => { if (e.key === 'Escape') closeList(); });
 
+    // Aplicar valor inicial
     const currentFont = input.value;
     if (currentFont) {
       loadGoogleFont(currentFont);
       preview.textContent = currentFont;
       preview.style.fontFamily = `'${currentFont}', serif`;
+      preview.style.fontStyle = '';
+      preview.style.color = '';
     }
   });
 }
@@ -109,13 +140,22 @@ function setFontPickerValue(container, fieldName, fontValue) {
   const input = picker.querySelector('input[type="hidden"]');
   const preview = picker.querySelector('.font-picker__preview');
   if (input) input.value = fontValue || '';
-  if (preview && fontValue) {
-    loadGoogleFont(fontValue);
-    preview.textContent = fontValue;
-    preview.style.fontFamily = `'${fontValue}', serif`;
+  if (preview) {
+    if (fontValue) {
+      loadGoogleFont(fontValue);
+      preview.textContent = fontValue;
+      preview.style.fontFamily = `'${fontValue}', serif`;
+      preview.style.fontStyle = '';
+      preview.style.color = '';
+    } else {
+      preview.textContent = '— Heredar del tema —';
+      preview.style.fontFamily = '';
+      preview.style.fontStyle = 'italic';
+      preview.style.color = 'var(--muted)';
+    }
   }
   picker.querySelectorAll('.font-picker__option').forEach(opt => {
-    opt.classList.toggle('is-selected', opt.dataset.font === fontValue);
+    opt.classList.toggle('is-selected', opt.dataset.font === (fontValue || ''));
   });
 }
 
@@ -412,6 +452,7 @@ async function selectInvitation(id) {
   fillThemeForm();
   renderSectionsList();
   renderGalleryList();
+  loadLinks();
   updateEditorHeader();
 }
 
@@ -650,8 +691,20 @@ function openSectionModal(section) {
   // Color pickers: usar valor guardado o blanco como fallback (no negro)
   f.background_color.value = section.background_color || '#ffffff';
   f.text_color.value = section.text_color || '#1a1a1a';
-  f.heading_font.value = section.heading_font || '';
-  f.body_font.value = section.body_font || '';
+  // Reinicializar font-pickers del modal (limpiar estado previo)
+  modal.querySelectorAll('.font-picker').forEach(p => {
+    delete p.dataset.initialized;
+    p.querySelector('.font-picker__list').innerHTML = '';
+    p.querySelector('.font-picker__list').hidden = true;
+    p.querySelector('.font-picker__trigger').classList.remove('is-open');
+  });
+
+  // Setear valores de fuente
+  setFontPickerValue(modal, 'heading_font', section.heading_font || '');
+  setFontPickerValue(modal, 'body_font', section.body_font || '');
+
+  // Inicializar pickers del modal
+  initFontPickers(modal);
   f.font_size.value = section.font_size || '';
   f.padding_y.value = section.padding_y ?? 80;
 
@@ -1069,6 +1122,122 @@ $('#delete-btn').addEventListener('click', async () => {
   $('#empty-state').hidden = false;
   await loadInvitations();
   toast('Invitación eliminada');
+});
+
+// ============================================================
+// SHORT LINKS
+// ============================================================
+const SHORT_BASE = `${window.location.origin}/s`;
+
+async function loadLinks() {
+  const inv = state.currentInvitation;
+  if (!inv) return;
+  const { data, error } = await sb.from('short_links')
+    .select('*')
+    .eq('invitation_id', inv.id)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  renderLinksList(data || []);
+}
+
+function renderLinksList(links) {
+  const ul = $('#links-list');
+  ul.innerHTML = '';
+  if (!links.length) {
+    ul.innerHTML = '<li style="color:var(--muted);font-style:italic;padding:0.5rem 0">No hay links creados aún.</li>';
+    return;
+  }
+  links.forEach(link => {
+    const shortUrl = `${SHORT_BASE}/${link.code}`;
+    const li = document.createElement('li');
+    li.className = 'link-item';
+    li.innerHTML = `
+      <div class="link-item__url">${shortUrl}</div>
+      <div class="link-item__meta">
+        <span class="link-item__clicks">👁 ${link.clicks || 0} clicks</span>
+        <span>${new Date(link.created_at).toLocaleDateString('es-ES')}</span>
+      </div>
+      <div class="link-item__actions">
+        <button type="button" class="btn btn--ghost btn--sm" data-action="copy" data-url="${shortUrl}">
+          Copiar
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm" data-action="share" data-url="${shortUrl}" data-title="${escapeHtml(state.currentInvitation.host_names)}">
+          Compartir
+        </button>
+        <button type="button" class="btn btn--danger btn--sm" data-action="delete" data-id="${link.id}">
+          Eliminar
+        </button>
+      </div>
+    `;
+
+    li.querySelector('[data-action="copy"]').addEventListener('click', e => {
+      navigator.clipboard.writeText(e.target.dataset.url);
+      toast('Link copiado al portapapeles ✓');
+    });
+
+    li.querySelector('[data-action="share"]').addEventListener('click', e => {
+      const btn = e.currentTarget;
+      if (navigator.share) {
+        navigator.share({
+          title: `Invitación de ${btn.dataset.title}`,
+          url: btn.dataset.url
+        });
+      } else {
+        navigator.clipboard.writeText(btn.dataset.url);
+        toast('Link copiado (Web Share no disponible)');
+      }
+    });
+
+    li.querySelector('[data-action="delete"]').addEventListener('click', async e => {
+      if (!confirm('¿Eliminar este link corto?')) return;
+      const { error } = await sb.from('short_links').delete().eq('id', e.target.dataset.id);
+      if (error) { toast(error.message, 'error'); return; }
+      toast('Link eliminado');
+      loadLinks();
+    });
+
+    ul.appendChild(li);
+  });
+}
+
+// Generar código aleatorio
+$('#generate-code-btn').addEventListener('click', () => {
+  const inv = state.currentInvitation;
+  const base = inv.host_names.split(/[\s&y]+/)[0].toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  const rand = Math.random().toString(36).slice(2, 5);
+  $('#form-new-link [name="code"]').value = `${base}${rand}`;
+});
+
+// Crear nuevo link
+$('#form-new-link').addEventListener('submit', async e => {
+  e.preventDefault();
+  const code = e.target.code.value.trim().toLowerCase();
+  if (!code) return;
+
+  const inv = state.currentInvitation;
+  const targetUrl = `${window.location.origin}/public/?i=${inv.slug}`;
+
+  const { error } = await sb.from('short_links').insert({
+    code,
+    invitation_id: inv.id,
+    target_url: targetUrl,
+    clicks: 0
+  });
+
+  if (error) {
+    if (error.code === '23505') {
+      toast('Ese código ya existe, elegí otro', 'error');
+    } else {
+      toast(error.message, 'error');
+    }
+    return;
+  }
+
+  e.target.code.value = '';
+  toast(`Link creado: ${SHORT_BASE}/${code} ✓`);
+  loadLinks();
 });
 
 // ============================================================

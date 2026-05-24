@@ -100,6 +100,7 @@
           <button class="tab" role="tab" data-tab="theme">Tema</button>
           <button class="tab" role="tab" data-tab="sections">Secciones</button>
           <button class="tab" role="tab" data-tab="gallery">Galería</button>
+          <button class="tab" role="tab" data-tab="links">🔗 Links</button>
         </nav>
 
         <!-- ===== TAB: GENERAL ===== -->
@@ -234,7 +235,30 @@
           </details>
         </div>
 
-        <!-- ===== TAB: GALERÍA ===== -->
+        <!-- ===== TAB: LINKS ===== -->
+        <div id="tab-links" class="tab-panel" role="tabpanel" hidden>
+          <div class="links-panel">
+            <p class="hint">Creá links cortos para compartir esta invitación. Formato: <code>vylo-50s.pages.dev/s/TU-CODIGO</code></p>
+
+            <form id="form-new-link" class="link-create-form">
+              <label class="full">
+                <span>Código personalizado</span>
+                <div class="link-input-row">
+                  <span class="link-prefix">vylo-50s.pages.dev/s/</span>
+                  <input type="text" name="code" placeholder="julia" pattern="[a-zA-Z0-9_-]+"
+                         maxlength="30" required autocomplete="off" />
+                  <button type="button" id="generate-code-btn" class="btn btn--ghost btn--sm">
+                    ↺ Generar
+                  </button>
+                  <button type="submit" class="btn btn--primary btn--sm">Crear link</button>
+                </div>
+                <small>Solo letras, números, guiones. Máx 30 caracteres.</small>
+              </label>
+            </form>
+
+            <ul id="links-list" class="links-list"></ul>
+          </div>
+        </div>
         <div id="tab-gallery" class="tab-panel" role="tabpanel" hidden>
           <div class="gallery-upload">
             <label class="btn btn--primary">
@@ -280,13 +304,27 @@
               <input type="color" name="text_color" />
               <button type="button" class="link-btn" data-clear="text_color">Limpiar</button>
             </label>
-            <label>
+            <label class="full">
               <span>Fuente de títulos</span>
-              <input type="text" name="heading_font" placeholder="Heredar" />
+              <div class="font-picker" data-name="heading_font" data-type="heading" data-allow-inherit="true">
+                <button type="button" class="font-picker__trigger">
+                  <span class="font-picker__preview" style="font-style:italic;color:var(--muted)">— Heredar del tema —</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <input type="hidden" name="heading_font" value="" />
+                <ul class="font-picker__list" hidden></ul>
+              </div>
             </label>
-            <label>
+            <label class="full">
               <span>Fuente de cuerpo</span>
-              <input type="text" name="body_font" placeholder="Heredar" />
+              <div class="font-picker" data-name="body_font" data-type="body" data-allow-inherit="true">
+                <button type="button" class="font-picker__trigger">
+                  <span class="font-picker__preview" style="font-style:italic;color:var(--muted)">— Heredar del tema —</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <input type="hidden" name="body_font" value="" />
+                <ul class="font-picker__list" hidden></ul>
+              </div>
             </label>
             <label>
               <span>Tamaño (px)</span>
