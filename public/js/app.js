@@ -179,7 +179,20 @@ function applySectionStyles(el, section, nextSection) {
   if (motion !== 'none') applyMotionEffect(el, motion);
 
   // Transición inferior entre secciones
-  // Transición inferior entre secciones
+  // Transición SUPERIOR
+  const topTransition = section.top_transition || 'none';
+  if (topTransition !== 'none') {
+    // Color del SVG superior = fondo de la sección ACTUAL (tapa el borde de arriba)
+    const currentBg = section.background_color ||
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+    el.style.position = 'relative';
+    el.style.overflow = 'hidden';
+    el.style.paddingTop = `calc(${section.padding_y || 80}px + 64px)`;
+    const topSvg = buildTransitionSVG(topTransition, currentBg, 'top');
+    if (topSvg) el.insertBefore(topSvg, el.firstChild);
+  }
+
+  // Transición INFERIOR
   const transition = section.bottom_transition || 'none';
   if (transition !== 'none') {
     // Color del SVG = fondo de la sección siguiente (lo que hay "debajo")
@@ -207,20 +220,23 @@ function applySectionStyles(el, section, nextSection) {
   }
 }
 
-/** Genera el SVG de transición en la parte inferior de la sección */
-function buildTransitionSVG(type, fillColor) {
+/** Genera el SVG de transición en la parte superior o inferior de la sección */
+function buildTransitionSVG(type, fillColor, position = 'bottom') {
   const wrap = document.createElement('div');
   wrap.setAttribute('aria-hidden', 'true');
+
+  const isTop = position === 'top';
   wrap.style.cssText = [
     'position:absolute',
-    'bottom:-1px',
+    isTop ? 'top:-1px' : 'bottom:-1px',
     'left:0',
     'width:100%',
     'line-height:0',
     'overflow:hidden',
     'z-index:4',
     'pointer-events:none',
-  ].join(';');
+    isTop ? 'transform:rotate(180deg)' : '',
+  ].filter(Boolean).join(';');
 
   const shapes = {
     'curve-down':  `<path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z"/>`,
