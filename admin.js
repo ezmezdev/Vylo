@@ -1,0 +1,1247 @@
+// ============================================================
+// ADMIN PANEL · LÓGICA
+// ============================================================
+
+console.log('[Admin] Script cargando...');
+
+if (!window.APP_CONFIG) {
+  console.error('[Admin] ERROR: config.js no cargó. APP_CONFIG no definido.');
+}
+if (!window.supabase) {
+  console.error('[Admin] ERROR: supabase-js no cargó.');
+}
+
+const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET } = window.APP_CONFIG;
+console.log('[Admin] Conectando a Supabase:', SUPABASE_URL);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('[Admin] Cliente Supabase creado OK');
+
+// ============================================================
+// FONT PICKER — selector de tipografías con preview visual
+// ============================================================
+const HEADING_FONTS = [
+  'Cormorant Garamond','Playfair Display','DM Serif Display',
+  'Bodoni Moda','Italiana','Cinzel','Marcellus',
+  'Great Vibes','Dancing Script','Allura','Pinyon Script',
+  'Libre Baskerville','Lora','Merriweather',
+];
+const BODY_FONTS = [
+  'Manrope','Inter','Lato','Montserrat','Nunito Sans',
+  'Karla','Work Sans','Poppins','Raleway','Open Sans',
+];
+const FONT_SAMPLES = { heading: 'Aa Bb', body: 'Texto de ejemplo' };
+const loadedFonts = new Set();
+
+function loadGoogleFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+  loadedFonts.add(fontName);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g,'+')}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+// ── Un único listener global para cerrar pickers ──
+document.addEventListener('click', e => {
+  document.querySelectorAll('.font-picker').forEach(p => {
+    if (!p.contains(e.target)) {
+      p.querySelector('.font-picker__list').hidden = true;
+      p.querySelector('.font-picker__trigger').classList.remove('is-open');
+    }
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.font-picker').forEach(p => {
+      p.querySelector('.font-picker__list').hidden = true;
+      p.querySelector('.font-picker__trigger').classList.remove('is-open');
+    });
+  }
+});
+
+function buildFontPickerList(picker) {
+  const type = picker.dataset.type || 'heading';
+  const allowInherit = picker.dataset.allowInherit === 'true';
+  const fonts = type === 'body' ? BODY_FONTS : HEADING_FONTS;
+  const input = picker.querySelector('input[type="hidden"]');
+  const list = picker.querySelector('.font-picker__list');
+
+  list.innerHTML = '';
+
+  if (allowInherit) {
+    const li = document.createElement('li');
+    li.className = 'font-picker__option font-picker__option--inherit';
+    li.dataset.font = '';
+    li.innerHTML = `<span class="font-picker__option-name" style="font-style:italic">Heredar del tema</span>
+      <span class="font-picker__option-sample" style="font-style:italic;color:var(--muted)">— global —</span>`;
+    if (input.value === '') li.classList.add('is-selected');
+    list.appendChild(li);
+  }
+
+  fonts.forEach(font => {
+    loadGoogleFont(font);
+    const li = document.createElement('li');
+    li.className = 'font-picker__option';
+    li.dataset.font = font;
+    li.innerHTML = `<span class="font-picker__option-name">${font}</span>
+      <span class="font-picker__option-sample" style="font-family:'${font}',serif">${FONT_SAMPLES[type] || 'Aa'}</span>`;
+    if (font === input.value) li.classList.add('is-selected');
+    list.appendChild(li);
+  });
+
+  // Click en opción — delegado en la lista
+  list.addEventListener('click', e => {
+    const li = e.target.closest('.font-picker__option');
+    if (!li) return;
+    applyFontPickerValue(picker, li.dataset.font);
+    list.hidden = true;
+    picker.querySelector('.font-picker__trigger').classList.remove('is-open');
+  });
+}
+
+function applyFontPickerValue(picker, font) {
+  const input = picker.querySelector('input[type="hidden"]');
+  const preview = picker.querySelector('.font-picker__preview');
+  input.value = font || '';
+  if (font) {
+    preview.textContent = font;
+    preview.style.fontFamily = `'${font}', serif`;
+    preview.style.fontStyle = '';
+    preview.style.color = '';
+  } else {
+    preview.textContent = '— Heredar del tema —';
+    preview.style.fontFamily = '';
+    preview.style.fontStyle = 'italic';
+    preview.style.color = 'var(--muted)';
+  }
+  picker.querySelectorAll('.font-picker__option').forEach(opt => {
+    opt.classList.toggle('is-selected', (opt.dataset.font || '') === (font || ''));
+  });
+}
+
+function initFontPickers(container = document) {
+  container.querySelectorAll('.font-picker').forEach(picker => {
+    if (picker.dataset.initialized) return;
+    picker.dataset.initialized = 'true';
+
+    const input = picker.querySelector('input[type="hidden"]');
+    const trigger = picker.querySelector('.font-picker__trigger');
+    const list = picker.querySelector('.font-picker__list');
+
+    // Construir lista inmediatamente
+    buildFontPickerList(picker);
+
+    // Aplicar valor actual al trigger
+    applyFontPickerValue(picker, input.value || '');
+
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      // Cerrar otros pickers abiertos
+      document.querySelectorAll('.font-picker').forEach(p => {
+        if (p !== picker) {
+          p.querySelector('.font-picker__list').hidden = true;
+          p.querySelector('.font-picker__trigger').classList.remove('is-open');
+        }
+      });
+      const isOpen = !list.hidden;
+      list.hidden = isOpen;
+      trigger.classList.toggle('is-open', !isOpen);
+      if (!isOpen) {
+        const selected = list.querySelector('.is-selected');
+        if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 10);
+      }
+    });
+  });
+}
+
+function setFontPickerValue(container, fieldName, fontValue) {
+  const picker = container.querySelector(`.font-picker[data-name="${fieldName}"]`);
+  if (!picker) return;
+  const input = picker.querySelector('input[type="hidden"]');
+  if (input) input.value = fontValue || '';
+  // Reconstruir lista con el nuevo valor seleccionado
+  buildFontPickerList(picker);
+  applyFontPickerValue(picker, fontValue || '');
+}
+
+// ============================================================
+// MODO OSCURO — persiste en localStorage
+// ============================================================
+
+// Inicializar modo oscuro
+initDarkMode();
+
+// Toggle modo oscuro
+document.getElementById('dark-mode-btn').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  applyThemeMode(current === 'dark' ? 'light' : 'dark');
+});
+
+// Estado global
+const state = {
+  user: null,
+  invitations: [],
+  currentInvitation: null,
+  currentSections: [],
+  currentGallery: [],
+  editingSection: null
+};
+
+// ---- Utilidades ----
+function $(sel, root = document) { return root.querySelector(sel); }
+function $$(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+
+function toast(msg, type = 'success') {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = `toast is-${type}`;
+  t.hidden = false;
+  setTimeout(() => { t.hidden = true; }, 3000);
+}
+
+function storageUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
+}
+
+/** Convierte ISO → valor para input datetime-local */
+function isoToLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+}
+function localToIso(local) {
+  if (!local) return null;
+  return new Date(local).toISOString();
+}
+
+// ============================================================
+// MODO OSCURO — persiste en localStorage
+// ============================================================
+function initDarkMode() {
+  const saved = localStorage.getItem('vylo-theme') || 'light';
+  applyThemeMode(saved);
+}
+
+function applyThemeMode(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('vylo-theme', mode);
+  const btn = document.getElementById('dark-mode-btn');
+  const sun = document.getElementById('icon-sun');
+  const moon = document.getElementById('icon-moon');
+  if (!btn) return;
+  if (mode === 'dark') {
+    btn.setAttribute('aria-label', 'Cambiar a modo claro');
+    btn.title = 'Modo claro';
+    sun.hidden = false;
+    moon.hidden = true;
+  } else {
+    btn.setAttribute('aria-label', 'Cambiar a modo oscuro');
+    btn.title = 'Modo oscuro';
+    sun.hidden = true;
+    moon.hidden = false;
+  }
+}
+
+// Aplicar antes del DOM para evitar flash
+(function() {
+  const saved = localStorage.getItem('vylo-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+console.log('[Admin] DOM listo, iniciando...');
+
+// Inicializar font-pickers
+initFontPickers();
+
+// Inicializar modo oscuro
+initDarkMode();
+
+function showLogin() {
+  console.log('[Admin] Mostrando login');
+  document.getElementById('auth-view').removeAttribute('hidden');
+  document.getElementById('admin-view').setAttribute('hidden', '');
+}
+
+function showAdmin() {
+  console.log('[Admin] Mostrando panel...');
+  document.getElementById('auth-view').setAttribute('hidden', '');
+  document.getElementById('admin-view').removeAttribute('hidden');
+  document.getElementById('user-email').textContent = state.user.email;
+  loadInvitations();
+}
+
+async function checkAuth() {
+  console.log('[Admin] Verificando sesión...');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    console.log('[Admin] Sesión:', session ? 'activa' : 'ninguna');
+    if (session) {
+      state.user = session.user;
+      showAdmin();
+    } else {
+      showLogin();
+    }
+  } catch(e) {
+    console.error('[Admin] Error en checkAuth:', e);
+    showLogin();
+  }
+}
+
+$('#login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const email = fd.get('email');
+  const password = fd.get('password');
+  console.log('[Admin] Intentando login con:', email);
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  console.log('[Admin] Respuesta login:', { data, error });
+
+  if (error) {
+    console.error('[Admin] Error de login:', error.message, error);
+    $('#auth-error').textContent = `Error: ${error.message}`;
+    return;
+  }
+  state.user = data.user;
+  console.log('[Admin] Login exitoso:', state.user.email);
+  showAdmin();
+});
+
+$('#logout-btn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  state.user = null;
+  showLogin();
+});
+
+// Mostrar / ocultar contraseña
+$('#toggle-password').addEventListener('click', () => {
+  const input = $('#password-input');
+  const btn = $('#toggle-password');
+  const showing = input.type === 'text';
+
+  input.type = showing ? 'password' : 'text';
+  btn.setAttribute('aria-pressed', String(!showing));
+  btn.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+  $('#icon-eye').style.display = showing ? 'block' : 'none';
+  $('#icon-eye-off').style.display = showing ? 'none' : 'block';
+});
+
+function showAdmin() {
+  console.log('[Admin] Mostrando panel...');
+  $('#auth-view').hidden = true;
+  $('#admin-view').hidden = false;
+  $('#user-email').textContent = state.user.email;
+  loadInvitations();
+}
+
+// ============================================================
+// LISTA DE INVITACIONES
+// ============================================================
+async function loadInvitations() {
+  console.log('[Admin] Cargando invitaciones...');
+  try {
+    const { data, error } = await sb
+      .from('invitations')
+      .select('id, slug, event_title, host_names, event_date, is_published')
+      .order('created_at', { ascending: false });
+
+    console.log('[Admin] Invitaciones resultado:', { data, error });
+    if (error) {
+      console.error('[Admin] Error cargando invitaciones:', error);
+      toast('Error: ' + error.message, 'error');
+      return;
+    }
+    state.invitations = data || [];
+    renderInvitationList();
+  } catch(e) {
+    console.error('[Admin] Excepción en loadInvitations:', e);
+    toast('Error inesperado: ' + e.message, 'error');
+  }
+}
+
+function renderInvitationList() {
+  const ul = $('#invitation-list');
+  ul.innerHTML = '';
+  state.invitations.forEach(inv => {
+    const li = document.createElement('li');
+    li.className = 'invitation-item';
+    if (state.currentInvitation?.id === inv.id) li.classList.add('is-active');
+    li.innerHTML = `
+      <div>
+        <div class="invitation-item__main">${escapeHtml(inv.host_names)}</div>
+        <div class="invitation-item__sub">${escapeHtml(inv.event_title)} · ${new Date(inv.event_date).toLocaleDateString('es-ES')}</div>
+      </div>
+      <span class="invitation-item__status ${inv.is_published ? 'is-published' : ''}">
+        ${inv.is_published ? 'Pub' : 'Borr'}
+      </span>
+    `;
+    li.addEventListener('click', () => selectInvitation(inv.id));
+    ul.appendChild(li);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// ============================================================
+// CREAR / SELECCIONAR INVITACIÓN
+// ============================================================
+$('#new-invitation-btn').addEventListener('click', async () => {
+  const raw = prompt('Slug para la nueva invitación (ej: boda-ana-luis):');
+  if (raw === null) return; // canceló
+
+  // Limpiar automáticamente: minúsculas, reemplazar espacios y caracteres inválidos por guión
+  const slug = raw.trim().toLowerCase()
+    .replace(/\s+/g, '-')           // espacios → guión
+    .replace(/[^a-z0-9-]/g, '-')   // caracteres inválidos → guión
+    .replace(/-+/g, '-')            // guiones múltiples → uno solo
+    .replace(/^-|-$/g, '');         // quitar guiones al inicio/fin
+
+  if (!slug) {
+    toast('El slug no puede estar vacío', 'error'); return;
+  }
+
+  console.log('[Admin] Creando invitación con slug:', slug);
+  const { data, error } = await sb
+    .from('invitations')
+    .insert({
+      slug,
+      event_type: 'boda',
+      host_names: 'Anfitriones',
+      event_title: 'Nuevo Evento',
+      event_date: new Date(Date.now() + 90 * 86400000).toISOString()
+    })
+    .select()
+    .single();
+  if (error) { toast(error.message, 'error'); return; }
+
+  // Crear las 5 secciones por defecto
+  const defaultSections = [
+    { section_type: 'hero',      position: 0, content: { subtitle: '', quote: '' } },
+    { section_type: 'countdown', position: 1, content: { title: 'Cuenta regresiva', subtitle: '' } },
+    { section_type: 'rsvp',      position: 2, content: { title: 'Confirma tu asistencia', subtitle: '', button_text: 'Confirmar' } },
+    { section_type: 'calendar',  position: 3, content: { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 } },
+    { section_type: 'gallery',   position: 4, content: { title: 'Galería', subtitle: '' } }
+  ].map(s => ({ ...s, invitation_id: data.id }));
+
+  await sb.from('sections').insert(defaultSections);
+  await loadInvitations();
+  selectInvitation(data.id);
+  toast('Invitación creada');
+});
+
+async function selectInvitation(id) {
+  $('#empty-state').hidden = true;
+  $('#editor').hidden = false;
+
+  const [invRes, secRes, galRes] = await Promise.all([
+    sb.from('invitations').select('*').eq('id', id).single(),
+    sb.from('sections').select('*').eq('invitation_id', id).order('position'),
+    sb.from('gallery_images').select('*').eq('invitation_id', id).order('position')
+  ]);
+
+  state.currentInvitation = invRes.data;
+  state.currentSections = secRes.data || [];
+  state.currentGallery = galRes.data || [];
+
+  renderInvitationList();
+  fillGeneralForm();
+  fillThemeForm();
+  renderSectionsList();
+  renderGalleryList();
+  loadLinks();
+  updateEditorHeader();
+}
+
+function updateEditorHeader() {
+  const inv = state.currentInvitation;
+  $('#editor-title').textContent = `${inv.host_names} · ${inv.event_title}`;
+  $('#publish-btn').textContent = inv.is_published ? 'Despublicar' : 'Publicar';
+  $('#preview-link').href = `../public/?i=${inv.slug}`;
+}
+
+// ============================================================
+// TABS
+// ============================================================
+$$('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    $$('.tab').forEach(t => t.classList.remove('is-active'));
+    $$('.tab-panel').forEach(p => { p.classList.remove('is-active'); p.hidden = true; });
+    tab.classList.add('is-active');
+    const panel = $(`#tab-${tab.dataset.tab}`);
+    panel.classList.add('is-active');
+    panel.hidden = false;
+  });
+});
+
+// ============================================================
+// FORMULARIO GENERAL
+// ============================================================
+function fillGeneralForm() {
+  const inv = state.currentInvitation;
+  const f = $('#form-general');
+  f.slug.value = inv.slug;
+  f.event_type.value = inv.event_type;
+  f.host_names.value = inv.host_names;
+  f.event_title.value = inv.event_title;
+  f.event_date.value = isoToLocal(inv.event_date);
+  f.countdown_target.value = isoToLocal(inv.countdown_target);
+  f.rsvp_form_url.value = inv.rsvp_form_url || '';
+  f.calendar_location.value = inv.calendar_location || '';
+  f.calendar_description.value = inv.calendar_description || '';
+}
+
+$('#form-general').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target;
+  const fd = new FormData(f);
+
+  const update = {
+    slug: fd.get('slug'),
+    event_type: fd.get('event_type'),
+    host_names: fd.get('host_names'),
+    event_title: fd.get('event_title'),
+    event_date: localToIso(fd.get('event_date')),
+    countdown_target: localToIso(fd.get('countdown_target')) || localToIso(fd.get('event_date')),
+    rsvp_form_url: fd.get('rsvp_form_url') || null,
+    calendar_location: fd.get('calendar_location') || null,
+    calendar_description: fd.get('calendar_description') || null
+  };
+
+  const { error } = await sb.from('invitations')
+    .update(update).eq('id', state.currentInvitation.id);
+  if (error) { toast(error.message, 'error'); return; }
+
+  toast('Cambios guardados');
+  await selectInvitation(state.currentInvitation.id);
+  await loadInvitations();
+});
+
+// ============================================================
+// FORMULARIO TEMA
+// ============================================================
+function fillThemeForm() {
+  const inv = state.currentInvitation;
+  const f = $('#form-theme');
+  f.primary_color.value = inv.primary_color;
+  f.background_color.value = inv.background_color;
+  f.accent_color.value = inv.accent_color;
+  f.base_font_size.value = inv.base_font_size;
+  // Font pickers
+  setFontPickerValue(f, 'heading_font', inv.heading_font);
+  setFontPickerValue(f, 'body_font', inv.body_font);
+}
+
+$('#form-theme').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const update = {
+    primary_color: fd.get('primary_color'),
+    background_color: fd.get('background_color'),
+    accent_color: fd.get('accent_color'),
+    heading_font: fd.get('heading_font'),
+    body_font: fd.get('body_font'),
+    base_font_size: Number(fd.get('base_font_size'))
+  };
+  const { error } = await sb.from('invitations')
+    .update(update).eq('id', state.currentInvitation.id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Tema actualizado');
+  state.currentInvitation = { ...state.currentInvitation, ...update };
+});
+
+// ============================================================
+// SECCIONES (lista, drag-and-drop, toggle, edición)
+// ============================================================
+function renderSectionsList() {
+  const ul = $('#sections-list');
+  ul.innerHTML = '';
+
+  state.currentSections.forEach((section, i) => {
+    const li = document.createElement('li');
+    li.className = `section-item ${section.is_enabled ? '' : 'is-disabled'}`;
+    li.draggable = true;
+    li.dataset.id = section.id;
+    li.innerHTML = `
+      <span class="section-item__drag" aria-hidden="true">⋮⋮</span>
+      <div class="section-item__info">
+        <div class="section-item__type">${sectionLabel(section.section_type)}</div>
+        <div class="section-item__meta">Posición ${i + 1} · ${section.is_enabled ? 'Habilitada' : 'Deshabilitada'}</div>
+      </div>
+      <div class="section-item__actions">
+        <button type="button" class="toggle ${section.is_enabled ? 'is-on' : ''}"
+                aria-label="${section.is_enabled ? 'Deshabilitar' : 'Habilitar'} sección"
+                data-action="toggle"></button>
+        <button type="button" class="btn btn--ghost btn--sm" data-action="edit">Editar</button>
+        <button type="button" class="btn btn--danger btn--sm" data-action="delete">Eliminar</button>
+      </div>
+    `;
+
+    li.querySelector('[data-action="toggle"]').addEventListener('click', () => toggleSection(section));
+    li.querySelector('[data-action="edit"]').addEventListener('click', () => openSectionModal(section));
+    li.querySelector('[data-action="delete"]').addEventListener('click', () => deleteSection(section));
+
+    // Drag and drop
+    li.addEventListener('dragstart', e => {
+      li.classList.add('is-dragging');
+      e.dataTransfer.setData('text/plain', section.id);
+    });
+    li.addEventListener('dragend', () => li.classList.remove('is-dragging'));
+    li.addEventListener('dragover', e => { e.preventDefault(); });
+    li.addEventListener('drop', e => {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData('text/plain');
+      reorderSections(draggedId, section.id);
+    });
+
+    ul.appendChild(li);
+  });
+}
+
+function sectionLabel(type) {
+  return ({
+    hero: 'Portada (Hero)',
+    countdown: 'Contador regresivo',
+    rsvp: 'Confirmación (RSVP)',
+    calendar: 'Calendario',
+    gallery: 'Galería',
+    location: 'Ubicación',
+  })[type] || type;
+}
+
+async function toggleSection(section) {
+  const { error } = await sb.from('sections')
+    .update({ is_enabled: !section.is_enabled })
+    .eq('id', section.id);
+  if (error) { toast(error.message, 'error'); return; }
+  section.is_enabled = !section.is_enabled;
+  renderSectionsList();
+}
+
+async function deleteSection(section) {
+  if (!confirm(`¿Eliminar la sección "${sectionLabel(section.section_type)}"?`)) return;
+  const { error } = await sb.from('sections').delete().eq('id', section.id);
+  if (error) { toast(error.message, 'error'); return; }
+  state.currentSections = state.currentSections.filter(s => s.id !== section.id);
+  renderSectionsList();
+  toast('Sección eliminada');
+}
+
+async function reorderSections(draggedId, targetId) {
+  const list = [...state.currentSections];
+  const fromIdx = list.findIndex(s => s.id === draggedId);
+  const toIdx = list.findIndex(s => s.id === targetId);
+  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+
+  const [moved] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, moved);
+
+  // Reasignar posiciones
+  const updates = list.map((s, i) => ({ id: s.id, position: i }));
+  for (const u of updates) {
+    await sb.from('sections').update({ position: u.position }).eq('id', u.id);
+  }
+  state.currentSections = list.map((s, i) => ({ ...s, position: i }));
+  renderSectionsList();
+}
+
+// ---- Agregar sección ----
+$$('.add-section__options button').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const type = btn.dataset.add;
+    const position = state.currentSections.length;
+    const { data, error } = await sb.from('sections')
+      .insert({
+        invitation_id: state.currentInvitation.id,
+        section_type: type,
+        position,
+        content: defaultContentFor(type)
+      })
+      .select()
+      .single();
+    if (error) { toast(error.message, 'error'); return; }
+    state.currentSections.push(data);
+    renderSectionsList();
+    toast('Sección agregada');
+  });
+});
+
+function defaultContentFor(type) {
+  return ({
+    hero:      { subtitle: '', quote: '' },
+    countdown: { title: 'Cuenta regresiva', subtitle: '' },
+    rsvp:      { title: 'Confirma tu asistencia', subtitle: '', button_text: 'Confirmar' },
+    calendar:  { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 },
+    gallery:   { title: 'Galería', subtitle: '' },
+    location:  { eyebrow: '¿Dónde?', title: '', address: '', map_height: 380, map_height_mobile: 260 }
+  })[type] || {};
+}
+
+// ---- Modal de edición de sección ----
+function openSectionModal(section) {
+  state.editingSection = section;
+  const modal = $('#section-modal');
+  const f = modal.querySelector('form');
+
+  $('#section-modal-title').textContent = `Editar: ${sectionLabel(section.section_type)}`;
+  f.is_enabled.checked = section.is_enabled;
+  // Color pickers: usar valor guardado o blanco como fallback (no negro)
+  f.background_color.value = section.background_color || '#ffffff';
+  f.text_color.value = section.text_color || '#1a1a1a';
+  // Resetear y reinicializar font-pickers del modal
+  modal.querySelectorAll('.font-picker').forEach(p => {
+    delete p.dataset.initialized;
+  });
+  setFontPickerValue(modal, 'heading_font', section.heading_font || '');
+  setFontPickerValue(modal, 'body_font', section.body_font || '');
+  initFontPickers(modal);
+  f.font_size.value = section.font_size || '';
+  f.padding_y.value = section.padding_y ?? 80;
+
+  // Inicializar campo de transición
+  f.bottom_transition.value = section.bottom_transition || 'none';
+  f.top_transition.value = section.top_transition || 'none';
+  f.motion_effect.value = section.motion_effect || 'none';
+
+  // Campos de contenido según el tipo
+  const fieldsEl = $('#section-content-fields');
+  fieldsEl.innerHTML = '';
+  contentFieldsFor(section.section_type).forEach(field => {
+    const label = document.createElement('label');
+    label.className = field.type === 'checkbox' ? 'checkbox full' : (field.full ? 'full' : '');
+
+    if (field.type === 'checkbox') {
+      const checked = section.content?.[field.key] === true || section.content?.[field.key] === 'true';
+      label.innerHTML = `
+        <input type="checkbox" name="content_${field.key}" ${checked ? 'checked' : ''} />
+        <span>${field.label}</span>
+      `;
+    } else if (field.type === 'textarea') {
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <textarea name="content_${field.key}" rows="2">${escapeHtml(section.content?.[field.key] || '')}</textarea>
+        ${field.help ? `<small>${field.help}</small>` : ''}
+      `;
+    } else if (field.type === 'select') {
+      const opts = field.options.map(o =>
+        `<option value="${o.value}" ${section.content?.[field.key] === o.value ? 'selected' : ''}>${o.label}</option>`
+      ).join('');
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <select name="content_${field.key}">${opts}</select>
+      `;
+    } else {
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <input type="${field.type || 'text'}" name="content_${field.key}"
+               value="${escapeHtml(section.content?.[field.key] ?? '')}"
+               ${field.min != null ? `min="${field.min}"` : ''}
+               ${field.max != null ? `max="${field.max}"` : ''} />
+        ${field.help ? `<small>${field.help}</small>` : ''}
+      `;
+    }
+    fieldsEl.appendChild(label);
+  });
+
+  // Preview imagen de fondo actual
+  const bgCurrent = $('#section-bg-current');
+  const bgPreview = $('#section-bg-preview');
+  const overlayInput = modal.querySelector('[name="bg_overlay"]');
+  const overlayValue = $('#bg-overlay-value');
+  const minHeightInput = modal.querySelector('[name="min_height"]');
+
+  minHeightInput.value = section.min_height || '';
+
+  // Height picker presets
+  const heightPresets = modal.querySelectorAll('.height-preset');
+  function updateHeightPresets(val) {
+    heightPresets.forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.value === val);
+    });
+  }
+  updateHeightPresets(section.min_height || '');
+  heightPresets.forEach(btn => {
+    btn.addEventListener('click', () => {
+      minHeightInput.value = btn.dataset.value;
+      updateHeightPresets(btn.dataset.value);
+    });
+  });
+  minHeightInput.addEventListener('input', () => {
+    updateHeightPresets(minHeightInput.value);
+  });
+  overlayInput.value = section.bg_overlay ?? 0;
+  overlayValue.textContent = overlayInput.value;
+  overlayInput.addEventListener('input', () => {
+    overlayValue.textContent = Number(overlayInput.value).toFixed(2);
+  });
+
+  const blurInput = modal.querySelector('[name="bg_blur"]');
+  const blurValue = $('#bg-blur-value');
+  blurInput.value = section.bg_blur ?? 0;
+  blurValue.textContent = blurInput.value;
+  blurInput.addEventListener('input', () => {
+    blurValue.textContent = blurInput.value;
+  });
+
+  if (section.bg_image_url) {
+    bgPreview.src = storageUrl(section.bg_image_url);
+    bgPreview.hidden = false;
+    bgCurrent.textContent = 'Imagen actual guardada';
+  } else {
+    bgPreview.hidden = true;
+    bgCurrent.textContent = '';
+  }
+
+  // Preview al seleccionar nueva imagen
+  modal.querySelector('[name="section_bg_image"]').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { bgPreview.src = ev.target.result; bgPreview.hidden = false; };
+    reader.readAsDataURL(file);
+  });
+
+  $('#clear-section-bg').addEventListener('click', () => {
+    modal.querySelector('[name="section_bg_image"]').value = '';
+    bgPreview.hidden = true;
+    bgCurrent.textContent = '(se quitará al guardar)';
+    modal._clearBg = true;
+  });
+  modal._clearBg = false;
+
+  modal.showModal();
+}
+
+function contentFieldsFor(type) {
+  const common = [
+    { key: 'title', label: 'Título', full: true },
+    { key: 'subtitle', label: 'Subtítulo', full: true }
+  ];
+  return ({
+    hero: [
+      { key: 'eyebrow', label: 'Eyebrow (texto pequeño superior)', full: true,
+        help: 'Si se deja vacío, usa el tipo de evento' },
+      { key: 'subtitle', label: 'Subtítulo', full: true },
+      { key: 'quote', label: 'Frase / cita', full: true, type: 'textarea' }
+    ],
+    countdown: common,
+    rsvp: [...common, { key: 'button_text', label: 'Texto del botón' }],
+    calendar: [
+      ...common,
+      { key: 'button_text', label: 'Texto del botón Google' },
+      { key: 'duration_hours', label: 'Duración (horas)', type: 'number', min: 1, max: 24 },
+      { key: 'show_ics', label: 'Mostrar botón "Descargar .ics"', type: 'checkbox' }
+    ],
+    gallery: [
+      ...common,
+      { key: 'layout', label: 'Diseño de la galería', type: 'select',
+        options: [
+          { value: 'masonry', label: 'Mosaico (masonry)' },
+          { value: 'grid', label: 'Cuadrícula uniforme' },
+          { value: 'stack', label: 'Una debajo de la otra' },
+          { value: 'horizontal', label: 'Tira horizontal (scroll)' },
+          { value: 'featured', label: 'Destacada + miniaturas' },
+        ],
+        full: true
+      }
+    ],
+    location: [
+      { key: 'eyebrow', label: 'Eyebrow (ej: ¿Dónde?)', full: true },
+      { key: 'title', label: 'Título (ej: nombre del salón)', full: true },
+      { key: 'address', label: 'Dirección completa', full: true,
+        help: 'Si se omite, usa la ubicación del calendario' },
+      { key: 'map_url', label: 'URL embed de Google Maps (opcional)', full: true,
+        help: 'En Google Maps → Compartir → Insertar mapa → copiá la URL del src del iframe. Si se omite, se genera automáticamente.' },
+      { key: 'map_height', label: 'Altura del mapa (px)', type: 'number', min: 200, max: 800,
+        help: 'Altura en desktop. Default: 380px' },
+      { key: 'map_height_mobile', label: 'Altura mapa mobile (px)', type: 'number', min: 150, max: 500,
+        help: 'Altura en mobile. Default: 260px' },
+    ]
+  })[type] || [];
+}
+
+$('#section-modal .modal__close').addEventListener('click', () => $('#section-modal').close());
+$('#section-modal [data-action="close"]').addEventListener('click', () => $('#section-modal').close());
+
+$$('#section-modal [data-clear]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = $('#section-modal form');
+    f[btn.dataset.clear].value = '';
+  });
+});
+
+$('#section-modal form').addEventListener('submit', async e => {
+  if (e.submitter && e.submitter.dataset.action === 'close') return;
+  e.preventDefault();
+  const f = e.target;
+  const section = state.editingSection;
+  const modal = $('#section-modal');
+  const fd = new FormData(f);
+
+  console.log('[Modal] Guardando sección:', section.section_type);
+
+  // Reconstruir content
+  const content = { ...(section.content || {}) };
+  for (const [key, value] of fd.entries()) {
+    if (key.startsWith('content_')) {
+      const k = key.replace('content_', '');
+      if (['title','subtitle','eyebrow','quote','button_text','layout'].includes(k)) {
+        content[k] = value;
+      } else {
+        content[k] = isNaN(value) || value === '' ? value : Number(value);
+      }
+    }
+  }
+  // Checkboxes no aparecen en FormData si no están marcados
+  const checkboxFields = ['show_ics'];
+  checkboxFields.forEach(k => {
+    const el = f.querySelector(`[name="content_${k}"]`);
+    if (el) content[k] = el.checked;
+  });
+
+  // Colores: solo guardar si son distintos de negro puro (#000000)
+  // Negro puro = el valor por defecto del color picker sin tocar
+  const bgColor = f.background_color.value;
+  const txtColor = f.text_color.value;
+  const hasBgColorData = section.background_color; // ya tenía color guardado
+
+  const update = {
+    is_enabled: f.is_enabled.checked,
+    background_color: (bgColor && bgColor !== '#000000') || hasBgColorData ? (bgColor !== '#000000' ? bgColor : null) : null,
+    text_color: (txtColor && txtColor !== '#000000') ? txtColor : null,
+    heading_font: fd.get('heading_font') || null,
+    body_font: fd.get('body_font') || null,
+    font_size: f.font_size.value ? Number(f.font_size.value) : null,
+    padding_y: f.padding_y.value !== '' ? Number(f.padding_y.value) : 80,
+    min_height: f.min_height.value.trim() || null,
+    bg_overlay: Number(f.bg_overlay.value) || 0,
+    bg_blur: Number(f.bg_blur.value) || 0,
+    bottom_transition: f.bottom_transition.value || 'none',
+    top_transition: f.top_transition.value || 'none',
+    motion_effect: f.motion_effect.value || 'none',
+    content
+  };
+
+  console.log('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
+  console.log('[Modal] Update a guardar:', update);
+
+  // Quitar imagen de fondo
+  if (modal._clearBg) update.bg_image_url = null;
+
+  // Subir nueva imagen de fondo si se seleccionó
+  const bgFile = fd.get('section_bg_image');
+  if (bgFile && bgFile.size > 0) {
+    const ext = bgFile.name.split('.').pop().toLowerCase();
+    const path = `${state.currentInvitation.id}/sections/${section.id}-bg.${ext}`;
+    const { error: upErr } = await sb.storage
+      .from(STORAGE_BUCKET).upload(path, bgFile, { upsert: true });
+    if (upErr) { toast('Error subiendo imagen: ' + upErr.message, 'error'); return; }
+    update.bg_image_url = path;
+  }
+
+  const { error } = await sb.from('sections')
+    .update(update).eq('id', section.id);
+  if (error) { toast(error.message, 'error'); return; }
+
+  Object.assign(section, update);
+  renderSectionsList();
+  $('#section-modal').close();
+  toast('Sección actualizada');
+});
+
+// ============================================================
+// GALERÍA
+// ============================================================
+function renderGalleryList() {
+  const ul = $('#gallery-list');
+  ul.innerHTML = '';
+
+  if (!state.currentGallery.length) {
+    ul.innerHTML = '<li style="grid-column:1/-1;color:var(--muted);font-style:italic;padding:1rem 0;">No hay imágenes aún. Subí algunas con el botón de arriba.</li>';
+    return;
+  }
+
+  state.currentGallery.forEach(img => {
+    const li = document.createElement('li');
+    li.className = 'gallery-img-item';
+    li.dataset.id = img.id;
+
+    const imgUrl = storageUrl(img.image_url);
+    li.innerHTML = `
+      <img src="${imgUrl}" alt="${escapeHtml(img.alt_text)}"
+           onerror="this.style.background='#eee';this.style.minHeight='120px'" />
+      <button type="button" class="gallery-img-item__remove" aria-label="Eliminar imagen" title="Eliminar">×</button>
+      <div class="gallery-img-item__body">
+        <input type="text" data-field="alt_text"
+               placeholder="Texto alternativo (obligatorio)"
+               value="${escapeHtml(img.alt_text)}" />
+        <input type="text" data-field="caption"
+               placeholder="Pie de foto (opcional)"
+               value="${escapeHtml(img.caption || '')}" />
+        <button type="button" class="btn btn--ghost btn--sm save-caption-btn">Guardar</button>
+      </div>
+    `;
+
+    // Guardar alt y caption
+    li.querySelector('.save-caption-btn').addEventListener('click', async () => {
+      const alt = li.querySelector('[data-field="alt_text"]').value.trim();
+      const caption = li.querySelector('[data-field="caption"]').value.trim();
+      if (!alt) { toast('El texto alternativo es obligatorio', 'error'); return; }
+      const { error } = await sb.from('gallery_images')
+        .update({ alt_text: alt, caption: caption || null })
+        .eq('id', img.id);
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+      img.alt_text = alt;
+      img.caption = caption;
+      toast('Imagen actualizada');
+    });
+
+    // Eliminar
+    li.querySelector('.gallery-img-item__remove').addEventListener('click', () => removeGalleryImage(img, li));
+
+    ul.appendChild(li);
+  });
+}
+
+$('#gallery-upload-input').addEventListener('change', async e => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+
+  const btn = e.target.closest('label');
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+
+  let subidas = 0;
+  for (const file of files) {
+    // Validar tipo y tamaño (max 5MB)
+    if (!file.type.startsWith('image/')) {
+      toast(`${file.name} no es una imagen válida`, 'error');
+      continue;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast(`${file.name} supera los 5MB`, 'error');
+      continue;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `${state.currentInvitation.id}/gallery/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+    console.log('[Gallery] Subiendo:', path);
+    const { error: upErr } = await sb.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+
+    if (upErr) {
+      console.error('[Gallery] Error upload:', upErr);
+      toast(`Error subiendo ${file.name}: ${upErr.message}`, 'error');
+      continue;
+    }
+
+    const { data, error } = await sb.from('gallery_images').insert({
+      invitation_id: state.currentInvitation.id,
+      image_url: path,
+      alt_text: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+      caption: null,
+      position: state.currentGallery.length
+    }).select().single();
+
+    if (error) {
+      console.error('[Gallery] Error DB:', error);
+      toast(`Error guardando ${file.name}: ${error.message}`, 'error');
+      continue;
+    }
+
+    state.currentGallery.push(data);
+    subidas++;
+  }
+
+  btn.style.opacity = '';
+  btn.style.pointerEvents = '';
+  e.target.value = '';
+  renderGalleryList();
+
+  if (subidas > 0) toast(`${subidas} imagen${subidas > 1 ? 'es' : ''} subida${subidas > 1 ? 's' : ''} ✓`);
+});
+
+async function removeGalleryImage(img, liEl) {
+  if (!confirm(`¿Eliminar esta imagen?\nEsta acción no se puede deshacer.`)) return;
+
+  // Deshabilitar el botón visualmente
+  if (liEl) liEl.style.opacity = '0.4';
+
+  // 1. Eliminar del storage
+  if (img.image_url && !img.image_url.startsWith('http')) {
+    const { error: storageErr } = await sb.storage
+      .from(STORAGE_BUCKET).remove([img.image_url]);
+    if (storageErr) console.warn('[Gallery] Error borrando storage:', storageErr);
+  }
+
+  // 2. Eliminar de la BD
+  const { error } = await sb.from('gallery_images').delete().eq('id', img.id);
+  if (error) {
+    toast('Error al eliminar: ' + error.message, 'error');
+    if (liEl) liEl.style.opacity = '';
+    return;
+  }
+
+  state.currentGallery = state.currentGallery.filter(g => g.id !== img.id);
+  renderGalleryList();
+  toast('Imagen eliminada');
+}
+
+// ============================================================
+// PUBLICAR / ELIMINAR INVITACIÓN
+// ============================================================
+$('#publish-btn').addEventListener('click', async () => {
+  const inv = state.currentInvitation;
+  const newState = !inv.is_published;
+  const { error } = await sb.from('invitations')
+    .update({ is_published: newState }).eq('id', inv.id);
+  if (error) { toast(error.message, 'error'); return; }
+  inv.is_published = newState;
+  updateEditorHeader();
+  await loadInvitations();
+  toast(newState ? 'Invitación publicada ✓' : 'Invitación despublicada');
+});
+
+$('#delete-btn').addEventListener('click', async () => {
+  const inv = state.currentInvitation;
+  if (!confirm(`¿Eliminar definitivamente la invitación "${inv.host_names}"?\nEsta acción no se puede deshacer.`)) return;
+  await sb.from('invitations').delete().eq('id', inv.id);
+  state.currentInvitation = null;
+  $('#editor').hidden = true;
+  $('#empty-state').hidden = false;
+  await loadInvitations();
+  toast('Invitación eliminada');
+});
+
+// ============================================================
+// SHORT LINKS
+// ============================================================
+const SHORT_BASE = `${window.location.origin}/s`;
+
+async function loadLinks() {
+  const inv = state.currentInvitation;
+  if (!inv) return;
+  const { data, error } = await sb.from('short_links')
+    .select('*')
+    .eq('invitation_id', inv.id)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  renderLinksList(data || []);
+}
+
+function renderLinksList(links) {
+  const ul = $('#links-list');
+  ul.innerHTML = '';
+  if (!links.length) {
+    ul.innerHTML = '<li style="color:var(--muted);font-style:italic;padding:0.5rem 0">No hay links creados aún.</li>';
+    return;
+  }
+  links.forEach(link => {
+    const shortUrl = `${SHORT_BASE}/${link.code}`;
+    const li = document.createElement('li');
+    li.className = 'link-item';
+    li.innerHTML = `
+      <div class="link-item__url">${shortUrl}</div>
+      <div class="link-item__meta">
+        <span class="link-item__clicks">👁 ${link.clicks || 0} clicks</span>
+        <span>${new Date(link.created_at).toLocaleDateString('es-ES')}</span>
+      </div>
+      <div class="link-item__actions">
+        <button type="button" class="btn btn--ghost btn--sm" data-action="copy" data-url="${shortUrl}">
+          Copiar
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm" data-action="share" data-url="${shortUrl}" data-title="${escapeHtml(state.currentInvitation.host_names)}">
+          Compartir
+        </button>
+        <button type="button" class="btn btn--danger btn--sm" data-action="delete" data-id="${link.id}">
+          Eliminar
+        </button>
+      </div>
+    `;
+
+    li.querySelector('[data-action="copy"]').addEventListener('click', e => {
+      navigator.clipboard.writeText(e.target.dataset.url);
+      toast('Link copiado al portapapeles ✓');
+    });
+
+    li.querySelector('[data-action="share"]').addEventListener('click', e => {
+      const btn = e.currentTarget;
+      if (navigator.share) {
+        navigator.share({
+          title: `Invitación de ${btn.dataset.title}`,
+          url: btn.dataset.url
+        });
+      } else {
+        navigator.clipboard.writeText(btn.dataset.url);
+        toast('Link copiado (Web Share no disponible)');
+      }
+    });
+
+    li.querySelector('[data-action="delete"]').addEventListener('click', async e => {
+      if (!confirm('¿Eliminar este link corto?')) return;
+      const { error } = await sb.from('short_links').delete().eq('id', e.target.dataset.id);
+      if (error) { toast(error.message, 'error'); return; }
+      toast('Link eliminado');
+      loadLinks();
+    });
+
+    ul.appendChild(li);
+  });
+}
+
+// Generar código aleatorio
+$('#generate-code-btn').addEventListener('click', () => {
+  const inv = state.currentInvitation;
+  const base = inv.host_names.split(/[\s&y]+/)[0].toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  const rand = Math.random().toString(36).slice(2, 5);
+  $('#form-new-link [name="code"]').value = `${base}${rand}`;
+});
+
+// Crear nuevo link
+$('#form-new-link').addEventListener('submit', async e => {
+  e.preventDefault();
+  const code = e.target.code.value.trim().toLowerCase();
+  if (!code) return;
+
+  const inv = state.currentInvitation;
+  const targetUrl = `${window.location.origin}/public/?i=${inv.slug}`;
+
+  const { error } = await sb.from('short_links').insert({
+    code,
+    invitation_id: inv.id,
+    target_url: targetUrl,
+    clicks: 0
+  });
+
+  if (error) {
+    if (error.code === '23505') {
+      toast('Ese código ya existe, elegí otro', 'error');
+    } else {
+      toast(error.message, 'error');
+    }
+    return;
+  }
+
+  e.target.code.value = '';
+  toast(`Link creado: ${SHORT_BASE}/${code} ✓`);
+  loadLinks();
+});
+
+// ============================================================
+// INICIO
+// ============================================================
+checkAuth();
+
+}); // fin DOMContentLoaded
