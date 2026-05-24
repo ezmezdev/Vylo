@@ -35,6 +35,10 @@
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
+
+/* Garantizar que [hidden] siempre oculte sin importar el display del elemento */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
