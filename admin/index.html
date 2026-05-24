@@ -295,9 +295,19 @@
               <span>Padding vertical (px)</span>
               <input type="number" name="padding_y" min="0" max="400" />
             </label>
-            <label>
-              <span>Altura mínima (px, vacío = auto)</span>
-              <input type="number" name="min_height" min="0" max="1200" placeholder="auto" />
+            <label class="full">
+              <span>Altura mínima</span>
+              <div class="height-picker">
+                <div class="height-picker__presets">
+                  <button type="button" class="height-preset" data-value="">Auto</button>
+                  <button type="button" class="height-preset" data-value="400">Compacta</button>
+                  <button type="button" class="height-preset" data-value="600">Media</button>
+                  <button type="button" class="height-preset" data-value="800">Alta</button>
+                  <button type="button" class="height-preset" data-value="100vh">⛶ Pantalla completa</button>
+                </div>
+                <input type="text" name="min_height" placeholder="ej: 500 ó 100vh" />
+              </div>
+              <small>Número en px o <code>100vh</code> para pantalla completa</small>
             </label>
             <label class="full">
               <span>Imagen de fondo de la sección</span>

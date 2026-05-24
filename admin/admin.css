@@ -591,3 +591,30 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
 .font-picker__list::-webkit-scrollbar { width: 4px; }
 .font-picker__list::-webkit-scrollbar-track { background: transparent; }
 .font-picker__list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ===== Height Picker ===== */
+.height-picker { display: flex; flex-direction: column; gap: 0.5rem; }
+.height-picker__presets {
+  display: flex; flex-wrap: wrap; gap: 0.375rem;
+}
+.height-preset {
+  padding: 0.3rem 0.75rem;
+  font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.height-preset:hover { border-color: var(--accent); color: var(--accent); }
+.height-preset.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.height-picker input[type="text"] {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px;
+}

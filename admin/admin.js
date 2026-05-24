@@ -706,6 +706,24 @@ function openSectionModal(section) {
   const minHeightInput = modal.querySelector('[name="min_height"]');
 
   minHeightInput.value = section.min_height || '';
+
+  // Height picker presets
+  const heightPresets = modal.querySelectorAll('.height-preset');
+  function updateHeightPresets(val) {
+    heightPresets.forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.value === val);
+    });
+  }
+  updateHeightPresets(section.min_height || '');
+  heightPresets.forEach(btn => {
+    btn.addEventListener('click', () => {
+      minHeightInput.value = btn.dataset.value;
+      updateHeightPresets(btn.dataset.value);
+    });
+  });
+  minHeightInput.addEventListener('input', () => {
+    updateHeightPresets(minHeightInput.value);
+  });
   overlayInput.value = section.bg_overlay ?? 0;
   overlayValue.textContent = overlayInput.value;
   overlayInput.addEventListener('input', () => {
@@ -838,7 +856,7 @@ $('#section-modal form').addEventListener('submit', async e => {
     body_font: f.body_font.value.trim() || null,
     font_size: f.font_size.value ? Number(f.font_size.value) : null,
     padding_y: f.padding_y.value !== '' ? Number(f.padding_y.value) : 80,
-    min_height: f.min_height.value !== '' && Number(f.min_height.value) > 0 ? Number(f.min_height.value) : null,
+    min_height: f.min_height.value.trim() || null,
     bg_overlay: Number(f.bg_overlay.value) || 0,
     bg_blur: Number(f.bg_blur.value) || 0,
     bottom_transition: f.bottom_transition.value || 'none',
