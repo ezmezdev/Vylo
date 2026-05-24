@@ -116,105 +116,73 @@ function applySectionStyles(el, section, nextSection) {
   if (section.body_font)         el.style.setProperty('--section-body-font', `'${section.body_font}'`);
   if (section.font_size)         el.style.setProperty('--section-font-size', `${section.font_size}px`);
   if (section.padding_y != null) el.style.setProperty('--section-padding-y', `${section.padding_y}px`);
-  if (section.min_height)        el.style.minHeight = `${section.min_height}px`;
 
-  // ── Imagen de fondo aislada por sección ──────────────────────
-  // Se usa un <div> absoluto para que NO afecte otras secciones.
-  // La imagen, el blur y el overlay viven todos dentro de ese div.
+  // Altura minima — soporta px y 100vh
+  if (section.min_height) {
+    const h = String(section.min_height);
+    el.style.minHeight = (h.includes('vh') || h.includes('%')) ? h : `${parseInt(h)}px`;
+  }
+
+  // Imagen de fondo
   if (section.bg_image_url) {
     const url = storageUrl(section.bg_image_url);
     const overlay = Math.min(Math.max(parseFloat(section.bg_overlay) || 0, 0), 1);
     const blur    = Math.min(Math.max(parseFloat(section.bg_blur)    || 0, 0), 20);
 
-    // Contenedor aislado de fondo
-    const bgWrap = document.createElement('div');
-    bgWrap.setAttribute('aria-hidden', 'true');
-    bgWrap.className = 'section-bg-wrap';
-    bgWrap.style.cssText = `
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
-      pointer-events: none;
-    `;
-
-    // La imagen en sí (con blur aplicado solo a ella)
-    const bgImg = document.createElement('div');
-    bgImg.style.cssText = `
-      position: absolute;
-      inset: ${blur > 0 ? `-${blur * 2}px` : '0'};
-      background-image: url('${url}');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      ${blur > 0 ? `filter: blur(${blur}px);` : ''}
-    `;
-    bgWrap.appendChild(bgImg);
-
-    // Overlay de color/opacidad (encima de la imagen, debajo del contenido)
-    if (overlay > 0) {
-      const ov = document.createElement('div');
-      ov.style.cssText = `
-        position: absolute;
-        inset: 0;
-        background: rgba(0,0,0,${overlay});
-      `;
-      bgWrap.appendChild(ov);
+    // El hero tiene su propio sistema fullscreen
+    if (section.section_type === 'hero') {
+      const bgImgEl = el.querySelector('.hero__bg-img img');
+      if (bgImgEl) {
+        bgImgEl.src = url;
+        bgImgEl.alt = '';
+        if (blur > 0) { bgImgEl.style.filter = `blur(${blur}px)`; bgImgEl.style.transform = 'scale(1.08)'; }
+      }
+      const heroOverlay = el.querySelector('.hero__overlay');
+      if (heroOverlay && overlay > 0) heroOverlay.style.background = `rgba(0,0,0,${overlay})`;
+    } else {
+      // Div aislado para otras secciones
+      const bgWrap = document.createElement('div');
+      bgWrap.setAttribute('aria-hidden','true');
+      bgWrap.className = 'section-bg-wrap';
+      bgWrap.style.cssText = 'position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;';
+      const bgDiv = document.createElement('div');
+      bgDiv.style.cssText = `position:absolute;inset:${blur>0?`-${blur*2}px`:'0'};background-image:url('${url}');background-size:cover;background-position:center;background-repeat:no-repeat;${blur>0?`filter:blur(${blur}px);`:''}`;
+      bgWrap.appendChild(bgDiv);
+      if (overlay > 0) {
+        const ov = document.createElement('div');
+        ov.style.cssText = `position:absolute;inset:0;background:rgba(0,0,0,${overlay});`;
+        bgWrap.appendChild(ov);
+      }
+      el.style.position = 'relative';
+      el.style.isolation = 'isolate';
+      el.insertBefore(bgWrap, el.firstChild);
+      el.querySelectorAll(':scope > *:not(.section-bg-wrap)').forEach(child => {
+        child.style.position = 'relative'; child.style.zIndex = '1';
+      });
     }
-
-    // Insertar el wrap como primer hijo y posicionar la sección
-    el.style.position = 'relative';
-    el.style.isolation = 'isolate';
-    el.insertBefore(bgWrap, el.firstChild);
-
-    // Asegurar que todo el contenido quede encima del fondo
-    el.querySelectorAll(':scope > *:not(.section-bg-wrap)').forEach(child => {
-      child.style.position = 'relative';
-      child.style.zIndex = '1';
-    });
   }
 
   // Efecto de movimiento
   const motion = section.motion_effect || 'none';
   if (motion !== 'none') applyMotionEffect(el, motion);
 
-  // Transición inferior entre secciones
-  // Transición SUPERIOR
+  // Transicion superior
   const topTransition = section.top_transition || 'none';
   if (topTransition !== 'none') {
-    // Color del SVG superior = fondo de la sección ACTUAL (tapa el borde de arriba)
-    const currentBg = section.background_color ||
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
-    el.style.position = 'relative';
-    el.style.overflow = 'hidden';
+    const currentBg = section.background_color || getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+    el.style.position = 'relative'; el.style.overflow = 'hidden';
     el.style.paddingTop = `calc(${section.padding_y || 80}px + 64px)`;
     const topSvg = buildTransitionSVG(topTransition, currentBg, 'top');
     if (topSvg) el.insertBefore(topSvg, el.firstChild);
   }
 
-  // Transición INFERIOR
+  // Transicion inferior
   const transition = section.bottom_transition || 'none';
   if (transition !== 'none') {
-    // Color del SVG = fondo de la sección siguiente (lo que hay "debajo")
-    let nextBg = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-bg').trim() || '#faf7f2';
-
-    if (nextSection) {
-      // Si la siguiente tiene imagen, intentar usar su background_color
-      // Si no tiene ninguno, usar el global
-      nextBg = (nextSection.bg_image_url && !nextSection.background_color)
-        ? nextBg
-        : (nextSection.background_color || nextBg);
-    }
-
-    // El SVG va DENTRO de la sección con overflow:hidden
-    // Se posiciona en la parte inferior y tapa el borde
-    el.style.position = 'relative';
-    el.style.overflow = 'hidden';
-    // Padding extra para que el contenido no quede tapado por el SVG (60px de alto)
-    const currentPadding = parseInt(el.style.getPropertyValue('--section-padding-y') || '80');
+    let nextBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+    if (nextSection) nextBg = (nextSection.bg_image_url && !nextSection.background_color) ? nextBg : (nextSection.background_color || nextBg);
+    el.style.position = 'relative'; el.style.overflow = 'hidden';
     el.style.paddingBottom = `calc(${section.padding_y || 80}px + 64px)`;
-
     const svgEl = buildTransitionSVG(transition, nextBg);
     if (svgEl) el.appendChild(svgEl);
   }
@@ -283,16 +251,13 @@ function applyMotionEffect(el, effect) {
   }
 }
 
-function renderHero(el, inv, content) {
+function renderHero(el, inv, content, section) {
   const eyebrowEl = el.querySelector('[data-field="event_type"]');
-  // Solo mostrar eyebrow si hay contenido explícito — si está vacío, ocultar
   if (content.eyebrow) {
     eyebrowEl.textContent = content.eyebrow;
   } else if (content.eyebrow === undefined && inv.event_type) {
-    // Primera vez sin configurar: mostrar tipo de evento como default
     eyebrowEl.textContent = inv.event_type.replace(/_/g, ' ');
   } else {
-    // Vacío explícito: ocultar el elemento
     eyebrowEl.hidden = true;
   }
   el.querySelector('[data-field="host_names"]').textContent = inv.host_names;
@@ -300,16 +265,30 @@ function renderHero(el, inv, content) {
   el.querySelector('[data-field="event_date"]').textContent = formatDate(inv.event_date);
   el.querySelector('[data-field="quote"]').textContent = content.quote || '';
 
-  // Imagen como fondo fullscreen
-  const bgImg = el.querySelector('[data-field="hero_image_bg"]');
-  if (inv.hero_image_url) {
-    bgImg.src = storageUrl(inv.hero_image_url);
-    bgImg.alt = `Foto de ${inv.host_names}`;
+  // La imagen del hero viene SIEMPRE de section.bg_image_url (subida en Secciones)
+  // inv.hero_image_url es legacy — ya no se usa
+  const imageUrl = section?.bg_image_url ? storageUrl(section.bg_image_url) : null;
+  const bgImgEl = el.querySelector('[data-field="hero_image_bg"]');
+  const bgWrap  = el.querySelector('.hero__bg-img');
+  const overlay = el.querySelector('.hero__overlay');
+
+  if (imageUrl) {
+    bgImgEl.src = imageUrl;
+    bgImgEl.alt = `Foto de ${inv.host_names}`;
+    // Aplicar blur si está configurado
+    const blur = Math.min(Math.max(parseFloat(section.bg_blur) || 0, 0), 20);
+    if (blur > 0) {
+      bgImgEl.style.filter = `blur(${blur}px)`;
+      bgImgEl.style.transform = 'scale(1.08)';
+    }
+    // Aplicar overlay
+    const ov = Math.min(Math.max(parseFloat(section.bg_overlay) || 0, 0), 1);
+    if (overlay && ov > 0) overlay.style.background = `rgba(0,0,0,${ov})`;
   } else {
-    // Sin foto: fondo con gradiente usando colores del tema
-    el.querySelector('.hero__bg-img').style.display = 'none';
-    el.querySelector('.hero__overlay').style.background =
-      `linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 70%, var(--color-accent)) 100%)`;
+    // Sin foto: gradiente con colores del tema
+    if (bgWrap) bgWrap.style.display = 'none';
+    if (overlay) overlay.style.background =
+      'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)';
   }
 }
 
@@ -527,6 +506,8 @@ function renderSections({ invitation, sections, gallery }) {
       if (renderer) {
         if (section.section_type === 'gallery') {
           renderer(node, invitation, section.content || {}, gallery);
+        } else if (section.section_type === 'hero') {
+          renderer(node, invitation, section.content || {}, section);
         } else {
           renderer(node, invitation, section.content || {});
         }
