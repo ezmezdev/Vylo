@@ -35,8 +35,14 @@
 
   <!-- ===== Estado de error ===== -->
   <div id="error-state" class="error-state" hidden>
-    <h1>Invitación no encontrada</h1>
-    <p>El enlace que seguiste no corresponde a una invitación válida o aún no fue publicada.</p>
+    <div class="error-state__inner">
+      <p class="error-state__icon">✦</p>
+      <h1>No pudimos cargar la invitación</h1>
+      <p id="error-detail">El enlace puede ser incorrecto, la invitación no fue publicada aún, o hubo un problema de conexión.</p>
+      <button onclick="location.reload()" class="btn btn--primary" style="margin-top:2rem">
+        Reintentar
+      </button>
+    </div>
   </div>
 
   <!-- ===== Contenido principal ===== -->
@@ -148,7 +154,33 @@
     </section>
   </template>
 
-  <template id="tpl-gallery">
+  <template id="tpl-location">
+    <section class="section section--location" data-section="location" aria-labelledby="location-title">
+      <div class="section__inner">
+        <p class="location__eyebrow" data-field="eyebrow"></p>
+        <h2 class="section__title" id="location-title" data-field="title"></h2>
+        <p class="location__address" data-field="address"></p>
+        <div class="location__map-wrap" data-field="map-wrap">
+          <iframe
+            data-field="map-iframe"
+            class="location__map"
+            loading="lazy"
+            allowfullscreen
+            referrerpolicy="no-referrer-when-downgrade"
+            title="Mapa del evento"
+            src=""
+          ></iframe>
+        </div>
+        <a class="location__directions btn btn--ghost" data-field="directions-link"
+           target="_blank" rel="noopener noreferrer">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M21.71 11.29l-9-9a1 1 0 0 0-1.42 0l-9 9a1 1 0 0 0 0 1.42l9 9a1 1 0 0 0 1.42 0l9-9a1 1 0 0 0 0-1.42zM14 14.5V12h-4v3H8v-4a1 1 0 0 1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/>
+          </svg>
+          Cómo llegar
+        </a>
+      </div>
+    </section>
+  </template>
     <section class="section section--gallery" data-section="gallery" aria-labelledby="gallery-title">
       <div class="section__inner">
         <h2 class="section__title" id="gallery-title" data-field="title"></h2>
