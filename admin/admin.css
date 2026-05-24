@@ -18,6 +18,8 @@
   --shadow-lg: 0 10px 30px rgba(0,0,0,0.08);
   --topbar-bg: #ffffff;
   --input-bg: #ffffff;
+  --btn-primary-bg: #111827;
+  --btn-primary-text: #ffffff;
 }
 
 /* ── Variables modo oscuro ── */
@@ -35,6 +37,8 @@
   --shadow-lg: 0 10px 30px rgba(0,0,0,0.4);
   --topbar-bg: #13151f;
   --input-bg: #1e2130;
+  --btn-primary-bg: #818cf8;
+  --btn-primary-text: #ffffff;
 }
 
 /* Transición suave al cambiar tema */
@@ -96,8 +100,8 @@ input, select, textarea, button { font: inherit; }
   transition: all 0.15s;
 }
 .btn--sm { padding: 0.375rem 0.875rem; font-size: 13px; }
-.btn--primary { background: var(--primary); color: #fff; }
-.btn--primary:hover { opacity: 0.9; }
+.btn--primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+.btn--primary:hover { filter: brightness(1.12); }
 .btn--secondary { background: var(--success); color: #fff; }
 .btn--ghost { background: transparent; border-color: var(--border); color: var(--text); }
 .btn--ghost:hover { background: var(--bg); }
