@@ -799,6 +799,7 @@ function openSectionModal(section) {
       editorWrap.dataset.cols = JSON.stringify(cols);
       renderColEditor();
       label.appendChild(editorWrap);
+    } else if (field.type === 'select') {
       const opts = field.options.map(o =>
         `<option value="${o.value}" ${section.content?.[field.key] === o.value ? 'selected' : ''}>${o.label}</option>`
       ).join('');
