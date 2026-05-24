@@ -181,11 +181,30 @@ function applySectionStyles(el, section, nextSection) {
   // Transición inferior entre secciones
   const transition = section.bottom_transition || 'none';
   if (transition !== 'none') {
-    const nextBg = nextSection?.background_color ||
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
-    el.style.overflow = 'hidden';
+    // Si la sección siguiente tiene imagen de fondo, usar su background_color
+    // como base (o transparente para que se mezcle con la imagen)
+    let nextBg = '#faf7f2';
+    if (nextSection) {
+      if (nextSection.bg_image_url) {
+        // La siguiente tiene imagen — usar su color de fondo o negro semitransparente
+        nextBg = nextSection.background_color || 'rgba(0,0,0,0)';
+      } else {
+        nextBg = nextSection.background_color ||
+          getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() ||
+          '#faf7f2';
+      }
+    } else {
+      nextBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+    }
+
+    el.style.position = 'relative';
+    el.style.overflow = 'visible'; // importante: visible para que el SVG solape la sección siguiente
     const svgEl = buildTransitionSVG(transition, nextBg);
-    if (svgEl) el.appendChild(svgEl);
+    if (svgEl) {
+      // z-index alto para que quede encima de la imagen de la sección siguiente
+      svgEl.style.zIndex = '10';
+      el.appendChild(svgEl);
+    }
   }
 }
 
@@ -224,8 +243,13 @@ function buildTransitionSVG(type, fillColor) {
   const wrap = document.createElement('div');
   wrap.setAttribute('aria-hidden', 'true');
   wrap.style.cssText = `
-    position:absolute; bottom:-1px; left:0; width:100%;
-    line-height:0; overflow:hidden; z-index:3;
+    position: absolute;
+    bottom: -59px;
+    left: 0;
+    width: 100%;
+    line-height: 0;
+    z-index: 10;
+    pointer-events: none;
   `;
 
   const shapes = {
