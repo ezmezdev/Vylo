@@ -179,88 +179,58 @@ function applySectionStyles(el, section, nextSection) {
   if (motion !== 'none') applyMotionEffect(el, motion);
 
   // Transición inferior entre secciones
+  // Transición inferior entre secciones
   const transition = section.bottom_transition || 'none';
   if (transition !== 'none') {
-    // Si la sección siguiente tiene imagen de fondo, usar su background_color
-    // como base (o transparente para que se mezcle con la imagen)
-    let nextBg = '#faf7f2';
+    // Color del SVG = fondo de la sección siguiente (lo que hay "debajo")
+    let nextBg = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-bg').trim() || '#faf7f2';
+
     if (nextSection) {
-      if (nextSection.bg_image_url) {
-        // La siguiente tiene imagen — usar su color de fondo o negro semitransparente
-        nextBg = nextSection.background_color || 'rgba(0,0,0,0)';
-      } else {
-        nextBg = nextSection.background_color ||
-          getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() ||
-          '#faf7f2';
-      }
-    } else {
-      nextBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf7f2';
+      // Si la siguiente tiene imagen, intentar usar su background_color
+      // Si no tiene ninguno, usar el global
+      nextBg = (nextSection.bg_image_url && !nextSection.background_color)
+        ? nextBg
+        : (nextSection.background_color || nextBg);
     }
 
+    // El SVG va DENTRO de la sección con overflow:hidden
+    // Se posiciona en la parte inferior y tapa el borde
     el.style.position = 'relative';
-    el.style.overflow = 'visible'; // importante: visible para que el SVG solape la sección siguiente
+    el.style.overflow = 'hidden';
+    // Padding extra para que el contenido no quede tapado por el SVG (60px de alto)
+    const currentPadding = parseInt(el.style.getPropertyValue('--section-padding-y') || '80');
+    el.style.paddingBottom = `calc(${section.padding_y || 80}px + 64px)`;
+
     const svgEl = buildTransitionSVG(transition, nextBg);
-    if (svgEl) {
-      // z-index alto para que quede encima de la imagen de la sección siguiente
-      svgEl.style.zIndex = '10';
-      el.appendChild(svgEl);
-    }
+    if (svgEl) el.appendChild(svgEl);
   }
 }
 
-function applyMotionEffect(el, effect) {
-  // --- Efectos de fondo (parallax, zoom) ---
-  if (effect === 'parallax' || effect === 'parallax-fast') {
-    el.style.backgroundAttachment = 'fixed';
-    el.style.backgroundSize = 'cover';
-    el.style.backgroundPosition = 'center center';
-    const speed = effect === 'parallax-fast' ? 0.5 : 0.25;
-    el.dataset.parallaxSpeed = speed;
-    el.classList.add('has-parallax');
-
-  } else if (effect === 'zoom-bg') {
-    el.classList.add('motion-zoom-bg');
-
-  } else if (effect === 'float') {
-    const inner = el.querySelector('.section__inner') || el;
-    inner.classList.add('motion-float');
-
-  } else if (effect === 'pulse-soft') {
-    const inner = el.querySelector('.section__inner') || el;
-    inner.classList.add('motion-pulse');
-
-  } else {
-    // Efectos de entrada al hacer scroll (fade-up, fade-left, zoom-in, etc.)
-    el.classList.add('motion-entry', `motion-${effect}`);
-    // Quitar la clase de animación base que ya existe (.section opacity:0)
-    // y reemplazarla con la propia del efecto
-    el.style.opacity = '0';
-  }
-}
-
-/** Genera el SVG de transición posicionado en la parte inferior de la sección */
+/** Genera el SVG de transición en la parte inferior de la sección */
 function buildTransitionSVG(type, fillColor) {
   const wrap = document.createElement('div');
   wrap.setAttribute('aria-hidden', 'true');
-  wrap.style.cssText = `
-    position: absolute;
-    bottom: -59px;
-    left: 0;
-    width: 100%;
-    line-height: 0;
-    z-index: 10;
-    pointer-events: none;
-  `;
+  wrap.style.cssText = [
+    'position:absolute',
+    'bottom:-1px',
+    'left:0',
+    'width:100%',
+    'line-height:0',
+    'overflow:hidden',
+    'z-index:4',
+    'pointer-events:none',
+  ].join(';');
 
   const shapes = {
-    'curve-down': `<path d="M0,0 C360,80 720,80 1440,0 L1440,80 L0,80 Z"/>`,
-    'curve-up':   `<path d="M0,80 C360,0 1080,0 1440,80 L1440,80 L0,80 Z"/>`,
-    'wave':       `<path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z"/>`,
-    'wave-double':`<path d="M0,40 C180,80 360,0 540,40 C720,80 900,0 1080,40 C1260,80 1350,60 1440,40 L1440,80 L0,80 Z"/>`,
-    'slant-right':`<polygon points="0,80 1440,0 1440,80"/>`,
-    'slant-left': `<polygon points="0,0 1440,80 0,80"/>`,
-    'triangle':   `<polygon points="0,80 720,0 1440,80"/>`,
-    'zigzag':     `<polyline points="0,80 120,20 240,80 360,20 480,80 600,20 720,80 840,20 960,80 1080,20 1200,80 1320,20 1440,80 1440,80 0,80" fill="${fillColor}"/>`
+    'curve-down':  `<path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z"/>`,
+    'curve-up':    `<path d="M0,80 C360,0 1080,0 1440,80 L1440,80 L0,80 Z"/>`,
+    'wave':        `<path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z"/>`,
+    'wave-double': `<path d="M0,40 C180,80 360,0 540,40 C720,80 900,0 1080,40 C1260,80 1350,60 1440,40 L1440,80 L0,80 Z"/>`,
+    'slant-right': `<polygon points="0,80 1440,0 1440,80"/>`,
+    'slant-left':  `<polygon points="0,0 1440,80 0,80"/>`,
+    'triangle':    `<polygon points="0,80 720,0 1440,80"/>`,
+    'zigzag':      `<polyline points="0,80 120,20 240,80 360,20 480,80 600,20 720,80 840,20 960,80 1080,20 1200,80 1320,20 1440,80 1440,80 0,80"/>`,
   };
 
   const shape = shapes[type];
@@ -268,14 +238,34 @@ function buildTransitionSVG(type, fillColor) {
 
   wrap.innerHTML = `
     <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg"
-         preserveAspectRatio="none" style="width:100%;height:60px;display:block">
+         preserveAspectRatio="none"
+         style="display:block;width:100%;height:64px">
       <g fill="${fillColor}">${shape}</g>
-    </svg>
-  `;
+    </svg>`;
   return wrap;
 }
 
-function renderHero(el, inv, content) {
+function applyMotionEffect(el, effect) {
+  if (effect === 'parallax' || effect === 'parallax-fast') {
+    el.style.backgroundAttachment = 'fixed';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center center';
+    const speed = effect === 'parallax-fast' ? 0.5 : 0.25;
+    el.dataset.parallaxSpeed = speed;
+    el.classList.add('has-parallax');
+  } else if (effect === 'zoom-bg') {
+    el.classList.add('motion-zoom-bg');
+  } else if (effect === 'float') {
+    const inner = el.querySelector('.section__inner') || el;
+    inner.classList.add('motion-float');
+  } else if (effect === 'pulse-soft') {
+    const inner = el.querySelector('.section__inner') || el;
+    inner.classList.add('motion-pulse');
+  } else {
+    el.classList.add('motion-entry', `motion-${effect}`);
+    el.style.opacity = '0';
+  }
+}
   el.querySelector('[data-field="event_type"]').textContent =
     content.eyebrow || inv.event_type.replace(/_/g, ' ');
   el.querySelector('[data-field="host_names"]').textContent = inv.host_names;
