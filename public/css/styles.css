@@ -164,11 +164,16 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--section-body-font, var(--font-body));
   font-size: var(--section-font-size, var(--font-base));
   overflow: hidden;
+  /* Sin animación por defecto — se aplica solo si tiene efecto configurado */
+}
+
+/* Reveal base: solo cuando se agrega la clase .has-reveal */
+.section.has-reveal {
   opacity: 0;
   transform: translateY(30px);
   transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
 }
-.section.is-visible {
+.section.has-reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
