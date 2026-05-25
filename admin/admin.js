@@ -1101,7 +1101,31 @@ function contentFieldsFor(type) {
       { key: 'eyebrow', label: 'Eyebrow (texto pequeño superior)', full: true,
         help: 'Si se deja vacío, usa el tipo de evento' },
       { key: 'subtitle', label: 'Subtítulo', full: true },
-      { key: 'quote', label: 'Frase / cita', full: true, type: 'textarea' }
+      { key: 'quote', label: 'Frase / cita', full: true, type: 'textarea' },
+      { key: 'text_position', label: 'Posición del texto', type: 'select', full: true,
+        options: [
+          { value: 'center', label: '⊕ Centro (default)' },
+          { value: 'bottom-left', label: '↙ Abajo izquierda' },
+          { value: 'bottom-center', label: '↓ Abajo centro' },
+          { value: 'bottom-right', label: '↘ Abajo derecha' },
+          { value: 'top-left', label: '↖ Arriba izquierda' },
+          { value: 'top-center', label: '↑ Arriba centro' },
+        ]
+      },
+      { key: 'text_size', label: 'Tamaño del nombre', type: 'select', full: true,
+        options: [
+          { value: 'normal', label: 'Normal' },
+          { value: 'large', label: 'Grande' },
+          { value: 'xlarge', label: 'Muy grande' },
+        ]
+      },
+      { key: 'text_weight', label: 'Peso del texto', type: 'select', full: true,
+        options: [
+          { value: 'light', label: 'Liviano (default)' },
+          { value: 'normal', label: 'Normal' },
+          { value: 'bold', label: 'Bold' },
+        ]
+      },
     ],
     countdown: common,
     rsvp: [...common, { key: 'button_text', label: 'Texto del botón' }],
