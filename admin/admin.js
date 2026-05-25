@@ -944,17 +944,24 @@ function openSectionModal(section) {
         // Cambios en inputs de texto/checkbox/select
         editorWrap.querySelectorAll('[data-col]').forEach(inp => {
           if (inp.type === 'file') return;
-          inp.addEventListener('change', () => {
+
+          const saveValue = () => {
             const c = JSON.parse(editorWrap.dataset.cols || '[]');
             const idx = Number(inp.dataset.col);
             const fkey = inp.dataset.cfield;
-            if (!fkey) return;
+            if (fkey === undefined || fkey === null || fkey === '') return;
             c[idx][fkey] = inp.type === 'checkbox' ? inp.checked : inp.value;
             editorWrap.dataset.cols = JSON.stringify(c);
-          });
-          // También guardar al perder foco (blur) para inputs de texto
-          if (inp.type === 'text' || inp.type === 'number') {
-            inp.addEventListener('blur', () => inp.dispatchEvent(new Event('change')));
+          };
+
+          if (inp.type === 'checkbox') {
+            inp.addEventListener('change', saveValue);
+          } else if (inp.tagName === 'SELECT') {
+            inp.addEventListener('change', saveValue);
+          } else {
+            // Texto: guardar en tiempo real al escribir
+            inp.addEventListener('input', saveValue);
+            inp.addEventListener('change', saveValue);
           }
         });
 
@@ -1194,7 +1201,9 @@ $('#section-modal form').addEventListener('submit', async e => {
   // Leer columnas de columns_editor si existe
   const colsEditor = modal.querySelector('.columns-editor');
   if (colsEditor) {
-    content.columns = JSON.parse(colsEditor.dataset.cols || '[]');
+    const cols = JSON.parse(colsEditor.dataset.cols || '[]');
+    console.log('[Modal] Columnas guardadas:', JSON.stringify(cols));
+    content.columns = cols;
   }
   const checkboxFields = ['show_ics'];
   checkboxFields.forEach(k => {
