@@ -1126,10 +1126,11 @@ function contentFieldsFor(type) {
       { key: 'subtitle', label: 'Subtítulo (opcional)', full: true },
       { key: '__columns_editor', label: 'Columnas', type: 'columns_editor', full: true,
         columnFields: [
-          { key: 'icon',  label: 'Emoji / ícono', placeholder: '👗' },
-          { key: 'label', label: 'Label pequeño', placeholder: 'DRESS CODE' },
-          { key: 'title', label: 'Título grande', placeholder: 'Elegante' },
-          { key: 'text',  label: 'Texto descriptivo', placeholder: 'Colores claros y azul' },
+          { key: 'icon',         label: 'Emoji / ícono', placeholder: '👗' },
+          { key: 'label',        label: 'Label pequeño', placeholder: 'DRESS CODE' },
+          { key: 'title',        label: 'Título grande', placeholder: 'Elegante' },
+          { key: 'text',         label: 'Texto descriptivo', placeholder: 'Colores claros y azul' },
+          { key: 'image_size',   label: 'Tamaño de imagen (ej: 200px, 40vw, 100%)', placeholder: '100%' },
         ]
       }
     ],
@@ -1142,9 +1143,10 @@ function contentFieldsFor(type) {
           { key: 'label',       label: 'Label pequeño', placeholder: 'REGALO' },
           { key: 'title',       label: 'Título', placeholder: 'Tu presencia es lo más importante' },
           { key: 'text',        label: 'Texto', placeholder: 'Pero si deseás hacerme un regalo...' },
-          { key: 'alias',       label: 'Alias (ej: juliaa.santos)', placeholder: '' },
+          { key: 'alias',       label: 'Alias (ej: MESA.ARBOL.MAR)', placeholder: 'MESA.ARBOL.MAR' },
           { key: 'mp_redirect', label: 'Redirigir a Mercado Pago', type: 'checkbox' },
-          { key: 'mp_alias',    label: 'Alias de Mercado Pago (para link directo)', placeholder: 'juliaa.santos' },
+          { key: 'mp_alias',    label: 'Alias de Mercado Pago (para link directo)', placeholder: 'MESA.ARBOL.MAR' },
+          { key: 'image_size',  label: 'Tamaño de imagen (ej: 200px, 40vw, 100%)', placeholder: '100%' },
         ]
       }
     ]
