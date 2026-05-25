@@ -301,30 +301,50 @@ function renderHero(el, inv, content, section) {
   el.querySelector('[data-field="event_date"]').textContent = formatDate(inv.event_date);
   el.querySelector('[data-field="quote"]').textContent = content.quote || '';
 
-  // La imagen del hero viene SIEMPRE de section.bg_image_url (subida en Secciones)
-  // inv.hero_image_url es legacy — ya no se usa
+  // ── Posición del contenido ──
+  const heroContent = el.querySelector('.hero__content');
+  const pos = content.text_position || 'center';
+  const posStyles = {
+    'center':        'align-items:center; justify-content:center; text-align:center; padding-bottom:var(--space-lg)',
+    'bottom-left':   'align-items:flex-start; justify-content:flex-end; text-align:left; padding-bottom:3rem; padding-left:1.5rem',
+    'bottom-center': 'align-items:center; justify-content:flex-end; text-align:center; padding-bottom:3rem',
+    'bottom-right':  'align-items:flex-end; justify-content:flex-end; text-align:right; padding-bottom:3rem; padding-right:1.5rem',
+    'top-left':      'align-items:flex-start; justify-content:flex-start; text-align:left; padding-top:3rem; padding-left:1.5rem',
+    'top-center':    'align-items:center; justify-content:flex-start; text-align:center; padding-top:3rem',
+  };
+  heroContent.style.cssText += ';' + (posStyles[pos] || posStyles['center']);
+
+  // ── Tamaño del nombre ──
+  const titleEl = el.querySelector('[data-field="host_names"]');
+  const sizes = { normal: 'clamp(3.5rem,11vw,8rem)', large: 'clamp(4.5rem,14vw,10rem)', xlarge: 'clamp(5.5rem,17vw,13rem)' };
+  titleEl.style.fontSize = sizes[content.text_size || 'normal'];
+
+  // ── Peso del texto ──
+  const weights = { light: '300', normal: '400', bold: '700' };
+  titleEl.style.fontWeight = weights[content.text_weight || 'light'];
+
+  // Overlay más oscuro en la parte donde está el texto para legibilidad
+  const overlay = el.querySelector('.hero__overlay');
+  if (overlay && pos.startsWith('bottom')) {
+    overlay.style.background = 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%)';
+  } else if (overlay && pos.startsWith('top')) {
+    overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%)';
+  }
+
+  // ── Imagen de fondo ──
   const imageUrl = section?.bg_image_url ? storageUrl(section.bg_image_url) : null;
   const bgImgEl = el.querySelector('[data-field="hero_image_bg"]');
   const bgWrap  = el.querySelector('.hero__bg-img');
-  const overlay = el.querySelector('.hero__overlay');
-
   if (imageUrl) {
     bgImgEl.src = imageUrl;
     bgImgEl.alt = `Foto de ${inv.host_names}`;
-    // Aplicar blur si está configurado
     const blur = Math.min(Math.max(parseFloat(section.bg_blur) || 0, 0), 20);
-    if (blur > 0) {
-      bgImgEl.style.filter = `blur(${blur}px)`;
-      bgImgEl.style.transform = 'scale(1.08)';
-    }
-    // Aplicar overlay
+    if (blur > 0) { bgImgEl.style.filter = `blur(${blur}px)`; bgImgEl.style.transform = 'scale(1.08)'; }
     const ov = Math.min(Math.max(parseFloat(section.bg_overlay) || 0, 0), 1);
     if (overlay && ov > 0) overlay.style.background = `rgba(0,0,0,${ov})`;
   } else {
-    // Sin foto: gradiente con colores del tema
     if (bgWrap) bgWrap.style.display = 'none';
-    if (overlay) overlay.style.background =
-      'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)';
+    if (overlay) overlay.style.background = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)';
   }
 }
 
