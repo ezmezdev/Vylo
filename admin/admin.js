@@ -752,6 +752,8 @@ function openSectionModal(section) {
             <span>Columna ${i+1}</span>
             <button type="button" class="link-btn col-remove" data-idx="${i}">Eliminar</button>
           </div>`;
+
+          // Campos de texto/checkbox
           field.columnFields.forEach(cf => {
             const colLabel = document.createElement('label');
             colLabel.className = cf.type === 'checkbox' ? 'checkbox' : '';
@@ -762,8 +764,39 @@ function openSectionModal(section) {
             }
             colDiv.appendChild(colLabel);
           });
+
+          // ── Imagen de la columna ──
+          const imgSection = document.createElement('div');
+          imgSection.className = 'col-img-section';
+          imgSection.innerHTML = `
+            <label><span>Imagen de la columna</span></label>
+            ${col.image_url ? `<img src="${storageUrl(col.image_url)}" class="col-img-preview" alt="imagen columna ${i+1}" />` : ''}
+            <div class="col-img-actions">
+              <label class="btn btn--ghost btn--sm col-img-upload-label">
+                ${col.image_url ? '↺ Cambiar imagen' : '+ Subir imagen'}
+                <input type="file" accept="image/*" class="col-img-input" data-col="${i}" hidden />
+              </label>
+              ${col.image_url ? `<button type="button" class="btn btn--danger btn--sm col-img-remove" data-col="${i}">Quitar</button>` : ''}
+            </div>
+            <div class="col-img-uploading" hidden>Subiendo...</div>
+          `;
+
+          // Posición de imagen
+          const posLabel = document.createElement('label');
+          posLabel.innerHTML = `
+            <span>Posición de la imagen</span>
+            <select data-col="${i}" data-cfield="image_position">
+              <option value="top" ${(col.image_position||'top')==='top' ? 'selected':''}>↑ Arriba del contenido</option>
+              <option value="bottom" ${col.image_position==='bottom' ? 'selected':''}>↓ Abajo del contenido</option>
+              <option value="left" ${col.image_position==='left' ? 'selected':''}>← Izquierda</option>
+              <option value="right" ${col.image_position==='right' ? 'selected':''}>→ Derecha</option>
+            </select>
+          `;
+          imgSection.appendChild(posLabel);
+          colDiv.appendChild(imgSection);
           editorWrap.appendChild(colDiv);
         });
+
         const addBtn = document.createElement('button');
         addBtn.type = 'button';
         addBtn.className = 'btn btn--ghost btn--sm';
@@ -775,7 +808,8 @@ function openSectionModal(section) {
           renderColEditor();
         };
         editorWrap.appendChild(addBtn);
-        // Remove handlers
+
+        // Eliminar columna
         editorWrap.querySelectorAll('.col-remove').forEach(btn => {
           btn.onclick = () => {
             const c = JSON.parse(editorWrap.dataset.cols || '[]');
@@ -784,14 +818,52 @@ function openSectionModal(section) {
             renderColEditor();
           };
         });
-        // Input change handlers
+
+        // Cambios en inputs de texto/checkbox/select
         editorWrap.querySelectorAll('[data-col]').forEach(inp => {
+          if (inp.type === 'file') return;
           inp.addEventListener('change', () => {
             const c = JSON.parse(editorWrap.dataset.cols || '[]');
             const idx = Number(inp.dataset.col);
             const fkey = inp.dataset.cfield;
+            if (!fkey) return;
             c[idx][fkey] = inp.type === 'checkbox' ? inp.checked : inp.value;
             editorWrap.dataset.cols = JSON.stringify(c);
+          });
+        });
+
+        // Subir imagen de columna
+        editorWrap.querySelectorAll('.col-img-input').forEach(fileInput => {
+          fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            const idx = Number(fileInput.dataset.col);
+            const uploadingEl = fileInput.closest('.col-img-section').querySelector('.col-img-uploading');
+            uploadingEl.hidden = false;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            const path = `${state.currentInvitation.id}/columns/col-${idx}-${Date.now()}.${ext}`;
+            const { error: upErr } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
+            uploadingEl.hidden = true;
+            if (upErr) { toast('Error subiendo imagen: ' + upErr.message, 'error'); return; }
+
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            c[idx].image_url = path;
+            editorWrap.dataset.cols = JSON.stringify(c);
+            toast('Imagen subida ✓');
+            renderColEditor();
+          });
+        });
+
+        // Quitar imagen de columna
+        editorWrap.querySelectorAll('.col-img-remove').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.col);
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            c[idx].image_url = null;
+            c[idx].image_position = 'top';
+            editorWrap.dataset.cols = JSON.stringify(c);
+            renderColEditor();
           });
         });
       }
