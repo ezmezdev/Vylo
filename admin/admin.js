@@ -748,9 +748,16 @@ function openSectionModal(section) {
         currentCols.forEach((col, i) => {
           const colDiv = document.createElement('div');
           colDiv.className = 'col-editor-item';
+          colDiv.draggable = true;
+          colDiv.dataset.idx = i;
           colDiv.innerHTML = `<div class="col-editor-header">
+            <span class="col-drag-handle" aria-hidden="true">⋮⋮</span>
             <span>Columna ${i+1}</span>
-            <button type="button" class="link-btn col-remove" data-idx="${i}">Eliminar</button>
+            <div class="col-header-actions">
+              <button type="button" class="btn btn--ghost btn--sm col-move-up" data-idx="${i}" ${i===0?'disabled':''}>↑</button>
+              <button type="button" class="btn btn--ghost btn--sm col-move-down" data-idx="${i}" ${i===currentCols.length-1?'disabled':''}>↓</button>
+              <button type="button" class="link-btn col-remove" data-idx="${i}">Eliminar</button>
+            </div>
           </div>`;
 
           // Campos de texto/checkbox
@@ -817,6 +824,55 @@ function openSectionModal(section) {
             editorWrap.dataset.cols = JSON.stringify(c);
             renderColEditor();
           };
+        });
+
+        // Mover arriba
+        editorWrap.querySelectorAll('.col-move-up').forEach(btn => {
+          btn.onclick = () => {
+            const idx = Number(btn.dataset.idx);
+            if (idx === 0) return;
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            [c[idx-1], c[idx]] = [c[idx], c[idx-1]];
+            editorWrap.dataset.cols = JSON.stringify(c);
+            renderColEditor();
+          };
+        });
+
+        // Mover abajo
+        editorWrap.querySelectorAll('.col-move-down').forEach(btn => {
+          btn.onclick = () => {
+            const idx = Number(btn.dataset.idx);
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            if (idx >= c.length - 1) return;
+            [c[idx], c[idx+1]] = [c[idx+1], c[idx]];
+            editorWrap.dataset.cols = JSON.stringify(c);
+            renderColEditor();
+          };
+        });
+
+        // Drag & drop
+        let dragIdx = null;
+        editorWrap.querySelectorAll('.col-editor-item').forEach(item => {
+          item.addEventListener('dragstart', e => {
+            dragIdx = Number(item.dataset.idx);
+            item.classList.add('is-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          item.addEventListener('dragend', () => item.classList.remove('is-dragging'));
+          item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+          item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+          item.addEventListener('drop', e => {
+            e.preventDefault();
+            item.classList.remove('drag-over');
+            const targetIdx = Number(item.dataset.idx);
+            if (dragIdx === null || dragIdx === targetIdx) return;
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            const [moved] = c.splice(dragIdx, 1);
+            c.splice(targetIdx, 0, moved);
+            editorWrap.dataset.cols = JSON.stringify(c);
+            dragIdx = null;
+            renderColEditor();
+          });
         });
 
         // Cambios en inputs de texto/checkbox/select
