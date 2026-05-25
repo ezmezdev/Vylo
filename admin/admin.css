@@ -776,3 +776,48 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
 .col-editor-item.drag-over {
   box-shadow: 0 -3px 0 var(--accent);
 }
+
+/* ===== Campos internos draggables dentro de columna ===== */
+.col-fields-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.col-field-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  cursor: default;
+  transition: box-shadow 0.15s, opacity 0.15s;
+}
+.col-field-row.is-dragging { opacity: 0.4; }
+.col-field-row.drag-over { box-shadow: 0 -3px 0 var(--accent); }
+.col-field-handle {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.25rem 0.1rem;
+  user-select: none;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+.col-field-handle:active { cursor: grabbing; }
+.col-field-content {
+  flex: 1;
+  min-width: 0;
+}
+.col-field-content label {
+  margin: 0;
+  gap: 0.25rem;
+}
+.col-field-content label > span {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

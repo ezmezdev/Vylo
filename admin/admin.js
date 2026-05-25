@@ -745,6 +745,7 @@ function openSectionModal(section) {
       function renderColEditor() {
         editorWrap.innerHTML = '';
         const currentCols = JSON.parse(editorWrap.dataset.cols || '[]');
+
         currentCols.forEach((col, i) => {
           const colDiv = document.createElement('div');
           colDiv.className = 'col-editor-item';
@@ -760,47 +761,68 @@ function openSectionModal(section) {
             </div>
           </div>`;
 
-          // Campos de texto/checkbox
-          field.columnFields.forEach(cf => {
-            const colLabel = document.createElement('label');
-            colLabel.className = cf.type === 'checkbox' ? 'checkbox' : '';
-            if (cf.type === 'checkbox') {
-              colLabel.innerHTML = `<input type="checkbox" data-col="${i}" data-cfield="${cf.key}" ${col[cf.key] ? 'checked' : ''}/><span>${cf.label}</span>`;
+          // ── Construir filas de campos reordenables ──
+          // El orden de los campos se guarda en col.__field_order
+          const allFieldKeys = [
+            ...field.columnFields.map(cf => cf.key),
+            '__image'
+          ];
+          const fieldOrder = col.__field_order || allFieldKeys;
+          // Asegurar que no falten ni sobren keys
+          const orderedKeys = [
+            ...fieldOrder.filter(k => allFieldKeys.includes(k)),
+            ...allFieldKeys.filter(k => !fieldOrder.includes(k))
+          ];
+
+          const fieldsContainer = document.createElement('div');
+          fieldsContainer.className = 'col-fields-container';
+          fieldsContainer.dataset.col = i;
+
+          orderedKeys.forEach(key => {
+            const row = document.createElement('div');
+            row.className = 'col-field-row';
+            row.draggable = true;
+            row.dataset.fieldKey = key;
+            row.dataset.col = i;
+
+            const handle = document.createElement('span');
+            handle.className = 'col-field-handle';
+            handle.setAttribute('aria-hidden', 'true');
+            handle.textContent = '⋮⋮';
+            row.appendChild(handle);
+
+            const content = document.createElement('div');
+            content.className = 'col-field-content';
+
+            if (key === '__image') {
+              // Campo imagen
+              content.innerHTML = `
+                <label><span>Imagen de la columna</span></label>
+                ${col.image_url ? `<img src="${storageUrl(col.image_url)}" class="col-img-preview" alt="" />` : ''}
+                <div class="col-img-actions">
+                  <label class="btn btn--ghost btn--sm col-img-upload-label">
+                    ${col.image_url ? '↺ Cambiar' : '+ Subir imagen'}
+                    <input type="file" accept="image/*" class="col-img-input" data-col="${i}" hidden />
+                  </label>
+                  ${col.image_url ? `<button type="button" class="btn btn--danger btn--sm col-img-remove" data-col="${i}">Quitar</button>` : ''}
+                </div>
+                <div class="col-img-uploading" hidden>Subiendo...</div>
+              `;
             } else {
-              colLabel.innerHTML = `<span>${cf.label}</span><input type="text" data-col="${i}" data-cfield="${cf.key}" value="${escapeHtml(col[cf.key] || '')}" placeholder="${cf.placeholder || ''}"/>`;
+              const cf = field.columnFields.find(f => f.key === key);
+              if (!cf) { row.remove(); return; }
+              if (cf.type === 'checkbox') {
+                content.innerHTML = `<label class="checkbox"><input type="checkbox" data-col="${i}" data-cfield="${cf.key}" ${col[cf.key] ? 'checked' : ''}/><span>${cf.label}</span></label>`;
+              } else {
+                content.innerHTML = `<label><span>${cf.label}</span><input type="text" data-col="${i}" data-cfield="${cf.key}" value="${escapeHtml(col[cf.key] || '')}" placeholder="${cf.placeholder || ''}"/></label>`;
+              }
             }
-            colDiv.appendChild(colLabel);
+
+            row.appendChild(content);
+            fieldsContainer.appendChild(row);
           });
 
-          // ── Imagen de la columna ──
-          const imgSection = document.createElement('div');
-          imgSection.className = 'col-img-section';
-          imgSection.innerHTML = `
-            <label><span>Imagen de la columna</span></label>
-            ${col.image_url ? `<img src="${storageUrl(col.image_url)}" class="col-img-preview" alt="imagen columna ${i+1}" />` : ''}
-            <div class="col-img-actions">
-              <label class="btn btn--ghost btn--sm col-img-upload-label">
-                ${col.image_url ? '↺ Cambiar imagen' : '+ Subir imagen'}
-                <input type="file" accept="image/*" class="col-img-input" data-col="${i}" hidden />
-              </label>
-              ${col.image_url ? `<button type="button" class="btn btn--danger btn--sm col-img-remove" data-col="${i}">Quitar</button>` : ''}
-            </div>
-            <div class="col-img-uploading" hidden>Subiendo...</div>
-          `;
-
-          // Posición de imagen
-          const posLabel = document.createElement('label');
-          posLabel.innerHTML = `
-            <span>Posición de la imagen</span>
-            <select data-col="${i}" data-cfield="image_position">
-              <option value="top" ${(col.image_position||'top')==='top' ? 'selected':''}>↑ Arriba del contenido</option>
-              <option value="bottom" ${col.image_position==='bottom' ? 'selected':''}>↓ Abajo del contenido</option>
-              <option value="left" ${col.image_position==='left' ? 'selected':''}>← Izquierda</option>
-              <option value="right" ${col.image_position==='right' ? 'selected':''}>→ Derecha</option>
-            </select>
-          `;
-          imgSection.appendChild(posLabel);
-          colDiv.appendChild(imgSection);
+          colDiv.appendChild(fieldsContainer);
           editorWrap.appendChild(colDiv);
         });
 
@@ -816,6 +838,73 @@ function openSectionModal(section) {
         };
         editorWrap.appendChild(addBtn);
 
+        // ── Drag & drop COLUMNAS completas ──
+        let dragColIdx = null;
+        editorWrap.querySelectorAll('.col-editor-item').forEach(item => {
+          item.addEventListener('dragstart', e => {
+            if (e.target.closest('.col-fields-container')) { e.stopPropagation(); return; }
+            dragColIdx = Number(item.dataset.idx);
+            item.classList.add('is-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          item.addEventListener('dragend', () => item.classList.remove('is-dragging'));
+          item.addEventListener('dragover', e => {
+            if (e.target.closest('.col-fields-container')) return;
+            e.preventDefault(); item.classList.add('drag-over');
+          });
+          item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+          item.addEventListener('drop', e => {
+            if (e.target.closest('.col-fields-container')) return;
+            e.preventDefault(); item.classList.remove('drag-over');
+            const targetIdx = Number(item.dataset.idx);
+            if (dragColIdx === null || dragColIdx === targetIdx) return;
+            const c = JSON.parse(editorWrap.dataset.cols || '[]');
+            const [moved] = c.splice(dragColIdx, 1);
+            c.splice(targetIdx, 0, moved);
+            editorWrap.dataset.cols = JSON.stringify(c);
+            dragColIdx = null;
+            renderColEditor();
+          });
+        });
+
+        // ── Drag & drop CAMPOS internos ──
+        let dragFieldKey = null, dragFieldColIdx = null;
+        editorWrap.querySelectorAll('.col-fields-container').forEach(container => {
+          const colIdx = Number(container.dataset.col);
+          container.querySelectorAll('.col-field-row').forEach(row => {
+            row.addEventListener('dragstart', e => {
+              e.stopPropagation();
+              dragFieldKey = row.dataset.fieldKey;
+              dragFieldColIdx = colIdx;
+              row.classList.add('is-dragging');
+              e.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragend', () => row.classList.remove('is-dragging'));
+            row.addEventListener('dragover', e => { e.stopPropagation(); e.preventDefault(); row.classList.add('drag-over'); });
+            row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+            row.addEventListener('drop', e => {
+              e.stopPropagation(); e.preventDefault();
+              row.classList.remove('drag-over');
+              if (!dragFieldKey || dragFieldColIdx !== colIdx) return;
+              const targetKey = row.dataset.fieldKey;
+              if (dragFieldKey === targetKey) return;
+              const c = JSON.parse(editorWrap.dataset.cols || '[]');
+              const col = c[colIdx];
+              const allKeys = [...field.columnFields.map(f => f.key), '__image'];
+              const order = col.__field_order ? [...col.__field_order] : [...allKeys];
+              const fromIdx = order.indexOf(dragFieldKey);
+              const toIdx = order.indexOf(targetKey);
+              if (fromIdx < 0 || toIdx < 0) return;
+              const [moved] = order.splice(fromIdx, 1);
+              order.splice(toIdx, 0, moved);
+              col.__field_order = order;
+              editorWrap.dataset.cols = JSON.stringify(c);
+              dragFieldKey = null; dragFieldColIdx = null;
+              renderColEditor();
+            });
+          });
+        });
+
         // Eliminar columna
         editorWrap.querySelectorAll('.col-remove').forEach(btn => {
           btn.onclick = () => {
@@ -826,7 +915,7 @@ function openSectionModal(section) {
           };
         });
 
-        // Mover arriba
+        // Mover arriba / abajo
         editorWrap.querySelectorAll('.col-move-up').forEach(btn => {
           btn.onclick = () => {
             const idx = Number(btn.dataset.idx);
@@ -837,8 +926,6 @@ function openSectionModal(section) {
             renderColEditor();
           };
         });
-
-        // Mover abajo
         editorWrap.querySelectorAll('.col-move-down').forEach(btn => {
           btn.onclick = () => {
             const idx = Number(btn.dataset.idx);
@@ -848,31 +935,6 @@ function openSectionModal(section) {
             editorWrap.dataset.cols = JSON.stringify(c);
             renderColEditor();
           };
-        });
-
-        // Drag & drop
-        let dragIdx = null;
-        editorWrap.querySelectorAll('.col-editor-item').forEach(item => {
-          item.addEventListener('dragstart', e => {
-            dragIdx = Number(item.dataset.idx);
-            item.classList.add('is-dragging');
-            e.dataTransfer.effectAllowed = 'move';
-          });
-          item.addEventListener('dragend', () => item.classList.remove('is-dragging'));
-          item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
-          item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
-          item.addEventListener('drop', e => {
-            e.preventDefault();
-            item.classList.remove('drag-over');
-            const targetIdx = Number(item.dataset.idx);
-            if (dragIdx === null || dragIdx === targetIdx) return;
-            const c = JSON.parse(editorWrap.dataset.cols || '[]');
-            const [moved] = c.splice(dragIdx, 1);
-            c.splice(targetIdx, 0, moved);
-            editorWrap.dataset.cols = JSON.stringify(c);
-            dragIdx = null;
-            renderColEditor();
-          });
         });
 
         // Cambios en inputs de texto/checkbox/select
@@ -894,15 +956,13 @@ function openSectionModal(section) {
             const file = fileInput.files[0];
             if (!file) return;
             const idx = Number(fileInput.dataset.col);
-            const uploadingEl = fileInput.closest('.col-img-section').querySelector('.col-img-uploading');
-            uploadingEl.hidden = false;
-
+            const uploadingEl = fileInput.closest('.col-field-content').querySelector('.col-img-uploading');
+            if (uploadingEl) uploadingEl.hidden = false;
             const ext = file.name.split('.').pop().toLowerCase();
             const path = `${state.currentInvitation.id}/columns/col-${idx}-${Date.now()}.${ext}`;
             const { error: upErr } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
-            uploadingEl.hidden = true;
-            if (upErr) { toast('Error subiendo imagen: ' + upErr.message, 'error'); return; }
-
+            if (uploadingEl) uploadingEl.hidden = true;
+            if (upErr) { toast('Error: ' + upErr.message, 'error'); return; }
             const c = JSON.parse(editorWrap.dataset.cols || '[]');
             c[idx].image_url = path;
             editorWrap.dataset.cols = JSON.stringify(c);
@@ -911,13 +971,12 @@ function openSectionModal(section) {
           });
         });
 
-        // Quitar imagen de columna
+        // Quitar imagen
         editorWrap.querySelectorAll('.col-img-remove').forEach(btn => {
           btn.addEventListener('click', () => {
             const idx = Number(btn.dataset.col);
             const c = JSON.parse(editorWrap.dataset.cols || '[]');
             c[idx].image_url = null;
-            c[idx].image_position = 'top';
             editorWrap.dataset.cols = JSON.stringify(c);
             renderColEditor();
           });
