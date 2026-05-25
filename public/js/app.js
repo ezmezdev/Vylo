@@ -589,8 +589,12 @@ function renderInfo(el, inv, content) {
 }
 
 function renderGift(el, inv, content) {
-  el.querySelector('[data-field="title"]').textContent = content.title || 'Regalo';
-  el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
+  const titleEl = el.querySelector('[data-field="title"]');
+  const subtitleEl = el.querySelector('[data-field="subtitle"]');
+  if (content.title) { titleEl.textContent = content.title; titleEl.hidden = false; }
+  else { titleEl.hidden = true; }
+  if (content.subtitle) { subtitleEl.textContent = content.subtitle; subtitleEl.hidden = false; }
+  else { subtitleEl.hidden = true; }
 
   const cols = el.querySelector('[data-field="gift-columns"]');
   const items = content.columns || [];
