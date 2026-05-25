@@ -1442,13 +1442,45 @@ $('#publish-btn').addEventListener('click', async () => {
 
 $('#delete-btn').addEventListener('click', async () => {
   const inv = state.currentInvitation;
-  if (!confirm(`¿Eliminar definitivamente la invitación "${inv.host_names}"?\nEsta acción no se puede deshacer.`)) return;
-  await sb.from('invitations').delete().eq('id', inv.id);
+
+  // Primera confirmación
+  const first = confirm(`¿Eliminar la invitación de "${inv.host_names}"?\n\nEsto eliminará toda la información, imágenes y secciones. Esta acción no se puede deshacer.`);
+  if (!first) return;
+
+  // Segunda confirmación — escribir el nombre
+  const typed = prompt(`Para confirmar, escribí exactamente:\n\n${inv.host_names}`);
+  if (typed === null) return; // canceló
+  if (typed.trim() !== inv.host_names.trim()) {
+    alert('El nombre no coincide. La invitación NO fue eliminada.');
+    return;
+  }
+
+  // Eliminar imágenes del storage primero
+  try {
+    const { data: files } = await sb.storage.from(STORAGE_BUCKET).list(inv.id, { limit: 200 });
+    if (files?.length) {
+      const paths = files.map(f => `${inv.id}/${f.name}`);
+      await sb.storage.from(STORAGE_BUCKET).remove(paths);
+    }
+    // Subcarpetas (columns, etc.)
+    const { data: subFiles } = await sb.storage.from(STORAGE_BUCKET).list(`${inv.id}/columns`, { limit: 200 });
+    if (subFiles?.length) {
+      const subPaths = subFiles.map(f => `${inv.id}/columns/${f.name}`);
+      await sb.storage.from(STORAGE_BUCKET).remove(subPaths);
+    }
+  } catch (e) {
+    console.warn('No se pudieron eliminar algunas imágenes:', e);
+  }
+
+  // Eliminar de la BD (cascade elimina secciones y links)
+  const { error } = await sb.from('invitations').delete().eq('id', inv.id);
+  if (error) { toast('Error al eliminar: ' + error.message, 'error'); return; }
+
   state.currentInvitation = null;
   $('#editor').hidden = true;
   $('#empty-state').hidden = false;
   await loadInvitations();
-  toast('Invitación eliminada');
+  toast('Invitación eliminada correctamente');
 });
 
 // ============================================================
