@@ -546,6 +546,13 @@ function renderLocation(el, inv, content) {
   }
 }
 
+function buildColImage(item) {
+  if (!item.image_url) return '';
+  return `<figure class="col__image-wrap">
+    <img src="${storageUrl(item.image_url)}" alt="" class="col__image" loading="lazy" decoding="async" />
+  </figure>`;
+}
+
 function renderInfo(el, inv, content) {
   const titleEl = el.querySelector('[data-field="title"]');
   const subtitleEl = el.querySelector('[data-field="subtitle"]');
@@ -555,14 +562,21 @@ function renderInfo(el, inv, content) {
   const cols = el.querySelector('[data-field="columns"]');
   const items = content.columns || [];
   items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'info__col';
-    div.innerHTML = `
-      ${item.icon ? `<div class="info__icon" aria-hidden="true">${item.icon}</div>` : ''}
+    const pos = item.image_position || 'top';
+    const imgHtml = buildColImage(item);
+    const textHtml = `
+      ${item.icon  ? `<div class="info__icon" aria-hidden="true">${item.icon}</div>` : ''}
       ${item.label ? `<p class="info__col-label">${item.label}</p>` : ''}
       ${item.title ? `<p class="info__col-title">${item.title}</p>` : ''}
       ${item.text  ? `<p class="info__col-text">${item.text}</p>` : ''}
     `;
+    const div = document.createElement('div');
+    div.className = `info__col ${item.image_url ? `info__col--img-${pos}` : ''}`;
+    if (pos === 'left' || pos === 'right') {
+      div.innerHTML = pos === 'left' ? imgHtml + textHtml : textHtml + imgHtml;
+    } else {
+      div.innerHTML = pos === 'top' ? imgHtml + textHtml : textHtml + imgHtml;
+    }
     cols.appendChild(div);
   });
 }
@@ -575,19 +589,20 @@ function renderGift(el, inv, content) {
   const items = content.columns || [];
 
   items.forEach(item => {
+    const pos = item.image_position || 'top';
+    const imgHtml = buildColImage(item);
     const div = document.createElement('div');
-    div.className = 'gift__col';
+    div.className = `gift__col ${item.image_url ? `gift__col--img-${pos}` : ''}`;
 
-    let inner = `
+    let textHtml = `
       ${item.icon  ? `<div class="gift__icon" aria-hidden="true">${item.icon}</div>` : ''}
       ${item.label ? `<p class="gift__label">${item.label}</p>` : ''}
       ${item.title ? `<p class="gift__col-title">${item.title}</p>` : ''}
       ${item.text  ? `<p class="gift__col-text">${item.text}</p>` : ''}
     `;
 
-    // Alias con botón copiar
     if (item.alias) {
-      inner += `
+      textHtml += `
         <div class="gift__alias-wrap" role="button" tabindex="0" aria-label="Copiar alias ${item.alias}">
           <span class="gift__alias">${item.alias}</span>
           <button type="button" class="gift__copy-btn" aria-label="Copiar">
@@ -599,9 +614,12 @@ function renderGift(el, inv, content) {
       `;
     }
 
-    div.innerHTML = inner;
+    if (pos === 'left' || pos === 'right') {
+      div.innerHTML = pos === 'left' ? imgHtml + textHtml : textHtml + imgHtml;
+    } else {
+      div.innerHTML = pos === 'top' ? imgHtml + textHtml : textHtml + imgHtml;
+    }
 
-    // Handler de copia del alias
     if (item.alias) {
       const aliasWrap = div.querySelector('.gift__alias-wrap');
       aliasWrap.addEventListener('click', () => triggerAliasCopy(item.alias, item.mp_redirect, item.mp_alias));
