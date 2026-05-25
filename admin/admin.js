@@ -1128,12 +1128,26 @@ function contentFieldsFor(type) {
       },
     ],
     countdown: common,
-    rsvp: [...common, { key: 'button_text', label: 'Texto del botón' }],
+    rsvp: [
+      ...common,
+      { key: 'button_text', label: 'Texto del botón', full: true },
+      { key: 'button_bg', label: 'Color de fondo del botón', type: 'color', full: false,
+        help: 'Vacío = usa el color primario del tema' },
+      { key: 'button_color', label: 'Color del texto del botón', type: 'color', full: false,
+        help: 'Vacío = blanco' },
+      { key: 'button_bg_hover', label: 'Color fondo al pasar el mouse', type: 'color', full: false },
+      { key: 'button_color_hover', label: 'Color texto al pasar el mouse', type: 'color', full: false },
+    ],
     calendar: [
       ...common,
-      { key: 'button_text', label: 'Texto del botón Google' },
+      { key: 'button_text', label: 'Texto del botón Google', full: true },
       { key: 'duration_hours', label: 'Duración (horas)', type: 'number', min: 1, max: 24 },
-      { key: 'show_ics', label: 'Mostrar botón "Descargar .ics"', type: 'checkbox' }
+      { key: 'show_ics', label: 'Mostrar botón "Descargar .ics"', type: 'checkbox' },
+      { key: 'button_bg', label: 'Color de fondo del botón', type: 'color', full: false,
+        help: 'Vacío = usa el color de acento del tema' },
+      { key: 'button_color', label: 'Color del texto del botón', type: 'color', full: false },
+      { key: 'button_bg_hover', label: 'Color fondo al pasar el mouse', type: 'color', full: false },
+      { key: 'button_color_hover', label: 'Color texto al pasar el mouse', type: 'color', full: false },
     ],
     gallery: [
       ...common,
@@ -1262,10 +1276,14 @@ $('#section-modal form').addEventListener('submit', async e => {
   console.log('[Modal] Update a guardar:', update);
 
   // Quitar imagen de fondo
-  if (modal._clearBg) update.bg_image_url = null;
+  if (modal._clearBg) {
+    update.bg_image_url = null;
+  } else if (!bgFile || bgFile.size === 0) {
+    // No se tocó la imagen — preservar la actual
+    update.bg_image_url = section.bg_image_url || null;
+  }
 
   // Subir nueva imagen de fondo si se seleccionó
-  const bgFile = fd.get('section_bg_image');
   if (bgFile && bgFile.size > 0) {
     const ext = bgFile.name.split('.').pop().toLowerCase();
     const path = `${state.currentInvitation.id}/sections/${section.id}-bg.${ext}`;
