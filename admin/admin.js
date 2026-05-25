@@ -1009,6 +1009,30 @@ function openSectionModal(section) {
         <span>${field.label}</span>
         <select name="content_${field.key}">${opts}</select>
       `;
+    } else if (field.type === 'color') {
+      const currentVal = section.content?.[field.key] || '';
+      const hasColor = !!(currentVal && currentVal !== '#000000');
+      label.innerHTML = `
+        <span>${field.label}</span>
+        <div class="color-field-wrap">
+          <label class="color-field-toggle">
+            <input type="checkbox" class="color-enable-check" ${hasColor ? 'checked' : ''} />
+            <span>${hasColor ? 'Personalizado' : 'Usar tema'}</span>
+          </label>
+          <input type="color" name="content_${field.key}"
+                 value="${hasColor ? currentVal : '#c9a961'}"
+                 style="display:${hasColor ? 'inline-block' : 'none'}" />
+        </div>
+        ${field.help ? `<small>${field.help}</small>` : ''}
+      `;
+      const check = label.querySelector('.color-enable-check');
+      const colorInp = label.querySelector('input[type="color"]');
+      const toggleSpan = label.querySelector('.color-field-toggle span');
+      check.addEventListener('change', () => {
+        colorInp.style.display = check.checked ? 'inline-block' : 'none';
+        toggleSpan.textContent = check.checked ? 'Personalizado' : 'Usar tema';
+        if (!check.checked) colorInp.value = '#000000';
+      });
     } else {
       label.innerHTML = `
         <span>${field.label}</span>
@@ -1226,10 +1250,18 @@ $('#section-modal form').addEventListener('submit', async e => {
 
   // Reconstruir content
   const content = { ...(section.content || {}) };
+  const stringFields = ['title','subtitle','eyebrow','quote','button_text','layout',
+    'text_position','text_size','text_weight',
+    'button_bg','button_color','button_bg_hover','button_color_hover'];
+  const colorFields = ['button_bg','button_color','button_bg_hover','button_color_hover'];
+
   for (const [key, value] of fd.entries()) {
     if (key.startsWith('content_')) {
       const k = key.replace('content_', '');
-      if (['title','subtitle','eyebrow','quote','button_text','layout'].includes(k)) {
+      if (colorFields.includes(k)) {
+        // Input color devuelve #000000 cuando está vacío — guardarlo como null
+        content[k] = (value && value !== '#000000') ? value : null;
+      } else if (stringFields.includes(k)) {
         content[k] = value;
       } else {
         content[k] = isNaN(value) || value === '' ? value : Number(value);

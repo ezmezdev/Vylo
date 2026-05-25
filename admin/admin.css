@@ -821,3 +821,33 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ===== Color field con toggle ===== */
+.color-field-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+.color-field-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+  margin: 0;
+}
+.color-field-toggle input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+}
+.color-field-wrap input[type="color"] {
+  width: 48px; height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 2px;
+  background: var(--input-bg);
+}
