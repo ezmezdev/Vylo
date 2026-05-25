@@ -302,17 +302,37 @@ function renderHero(el, inv, content, section) {
   el.querySelector('[data-field="quote"]').textContent = content.quote || '';
 
   // ── Posición del contenido ──
+  const heroSection = el; // el section mismo es el flex container
   const heroContent = el.querySelector('.hero__content');
   const pos = content.text_position || 'center';
-  const posStyles = {
-    'center':        'align-items:center; justify-content:center; text-align:center; padding-bottom:var(--space-lg)',
-    'bottom-left':   'align-items:flex-start; justify-content:flex-end; text-align:left; padding-bottom:3rem; padding-left:1.5rem',
-    'bottom-center': 'align-items:center; justify-content:flex-end; text-align:center; padding-bottom:3rem',
-    'bottom-right':  'align-items:flex-end; justify-content:flex-end; text-align:right; padding-bottom:3rem; padding-right:1.5rem',
-    'top-left':      'align-items:flex-start; justify-content:flex-start; text-align:left; padding-top:3rem; padding-left:1.5rem',
-    'top-center':    'align-items:center; justify-content:flex-start; text-align:center; padding-top:3rem',
+
+  // Reset primero
+  heroSection.style.alignItems = '';
+  heroSection.style.justifyContent = '';
+  heroContent.style.alignItems = '';
+  heroContent.style.textAlign = '';
+  heroContent.style.paddingBottom = '';
+  heroContent.style.paddingTop = '';
+  heroContent.style.paddingLeft = '';
+  heroContent.style.paddingRight = '';
+
+  const configs = {
+    'center':        { si: 'center', sj: 'center',     ci: 'center',     ta: 'center' },
+    'bottom-left':   { si: 'flex-start', sj: 'flex-end', ci: 'flex-start', ta: 'left',   pb: '3rem', pl: '2rem' },
+    'bottom-center': { si: 'center',     sj: 'flex-end', ci: 'center',     ta: 'center', pb: '3rem' },
+    'bottom-right':  { si: 'flex-end',   sj: 'flex-end', ci: 'flex-end',   ta: 'right',  pb: '3rem', pr: '2rem' },
+    'top-left':      { si: 'flex-start', sj: 'flex-start', ci: 'flex-start', ta: 'left', pt: '3rem', pl: '2rem' },
+    'top-center':    { si: 'center',     sj: 'flex-start', ci: 'center',   ta: 'center', pt: '3rem' },
   };
-  heroContent.style.cssText += ';' + (posStyles[pos] || posStyles['center']);
+  const cfg = configs[pos] || configs['center'];
+  heroSection.style.alignItems    = cfg.si;
+  heroSection.style.justifyContent = cfg.sj;
+  heroContent.style.alignItems    = cfg.ci;
+  heroContent.style.textAlign     = cfg.ta;
+  if (cfg.pb) heroContent.style.paddingBottom = cfg.pb;
+  if (cfg.pt) heroContent.style.paddingTop    = cfg.pt;
+  if (cfg.pl) heroContent.style.paddingLeft   = cfg.pl;
+  if (cfg.pr) heroContent.style.paddingRight  = cfg.pr;
 
   // ── Tamaño del nombre ──
   const titleEl = el.querySelector('[data-field="host_names"]');
