@@ -302,37 +302,66 @@ function renderHero(el, inv, content, section) {
   el.querySelector('[data-field="quote"]').textContent = content.quote || '';
 
   // ── Posición del contenido ──
-  const heroSection = el; // el section mismo es el flex container
   const heroContent = el.querySelector('.hero__content');
   const pos = content.text_position || 'center';
 
-  // Reset primero
-  heroSection.style.alignItems = '';
-  heroSection.style.justifyContent = '';
-  heroContent.style.alignItems = '';
-  heroContent.style.textAlign = '';
-  heroContent.style.paddingBottom = '';
-  heroContent.style.paddingTop = '';
-  heroContent.style.paddingLeft = '';
-  heroContent.style.paddingRight = '';
+  // Reset completo
+  el.style.alignItems = 'center';
+  heroContent.style.marginTop = '';
+  heroContent.style.marginBottom = '';
+  heroContent.style.alignItems = 'center';
+  heroContent.style.textAlign = 'center';
+  heroContent.style.paddingTop = 'var(--space-xl)';
+  heroContent.style.paddingBottom = 'var(--space-xl)';
+  heroContent.style.paddingLeft = 'var(--space-md)';
+  heroContent.style.paddingRight = 'var(--space-md)';
 
-  const configs = {
-    'center':        { si: 'center', sj: 'center',     ci: 'center',     ta: 'center' },
-    'bottom-left':   { si: 'flex-start', sj: 'flex-end', ci: 'flex-start', ta: 'left',   pb: '3rem', pl: '2rem' },
-    'bottom-center': { si: 'center',     sj: 'flex-end', ci: 'center',     ta: 'center', pb: '3rem' },
-    'bottom-right':  { si: 'flex-end',   sj: 'flex-end', ci: 'flex-end',   ta: 'right',  pb: '3rem', pr: '2rem' },
-    'top-left':      { si: 'flex-start', sj: 'flex-start', ci: 'flex-start', ta: 'left', pt: '3rem', pl: '2rem' },
-    'top-center':    { si: 'center',     sj: 'flex-start', ci: 'center',   ta: 'center', pt: '3rem' },
-  };
-  const cfg = configs[pos] || configs['center'];
-  heroSection.style.alignItems    = cfg.si;
-  heroSection.style.justifyContent = cfg.sj;
-  heroContent.style.alignItems    = cfg.ci;
-  heroContent.style.textAlign     = cfg.ta;
-  if (cfg.pb) heroContent.style.paddingBottom = cfg.pb;
-  if (cfg.pt) heroContent.style.paddingTop    = cfg.pt;
-  if (cfg.pl) heroContent.style.paddingLeft   = cfg.pl;
-  if (cfg.pr) heroContent.style.paddingRight  = cfg.pr;
+  // Aplicar posición usando margin-top/bottom auto (más confiable que justify-content)
+  switch (pos) {
+    case 'bottom-center':
+      heroContent.style.marginTop    = 'auto';
+      heroContent.style.alignItems   = 'center';
+      heroContent.style.textAlign    = 'center';
+      heroContent.style.paddingBottom = '3.5rem';
+      heroContent.style.paddingTop   = '1rem';
+      break;
+    case 'bottom-left':
+      heroContent.style.marginTop    = 'auto';
+      heroContent.style.alignItems   = 'flex-start';
+      heroContent.style.textAlign    = 'left';
+      heroContent.style.paddingBottom = '3.5rem';
+      heroContent.style.paddingTop   = '1rem';
+      heroContent.style.paddingLeft  = '2rem';
+      el.style.alignItems = 'flex-start';
+      break;
+    case 'bottom-right':
+      heroContent.style.marginTop    = 'auto';
+      heroContent.style.alignItems   = 'flex-end';
+      heroContent.style.textAlign    = 'right';
+      heroContent.style.paddingBottom = '3.5rem';
+      heroContent.style.paddingTop   = '1rem';
+      heroContent.style.paddingRight = '2rem';
+      el.style.alignItems = 'flex-end';
+      break;
+    case 'top-center':
+      heroContent.style.marginBottom = 'auto';
+      heroContent.style.alignItems   = 'center';
+      heroContent.style.textAlign    = 'center';
+      heroContent.style.paddingTop   = '3.5rem';
+      heroContent.style.paddingBottom = '1rem';
+      break;
+    case 'top-left':
+      heroContent.style.marginBottom = 'auto';
+      heroContent.style.alignItems   = 'flex-start';
+      heroContent.style.textAlign    = 'left';
+      heroContent.style.paddingTop   = '3.5rem';
+      heroContent.style.paddingBottom = '1rem';
+      heroContent.style.paddingLeft  = '2rem';
+      el.style.alignItems = 'flex-start';
+      break;
+    default: // center
+      break;
+  }
 
   // ── Tamaño del nombre ──
   const titleEl = el.querySelector('[data-field="host_names"]');
