@@ -1307,6 +1307,9 @@ $('#section-modal form').addEventListener('submit', async e => {
   console.log('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
   console.log('[Modal] Update a guardar:', update);
 
+  // Imagen de fondo
+  const bgFile = fd.get('section_bg_image');
+
   // Quitar imagen de fondo
   if (modal._clearBg) {
     update.bg_image_url = null;
