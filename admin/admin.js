@@ -805,7 +805,11 @@ function openSectionModal(section) {
                     <input type="file" accept="image/*" class="col-img-input" data-col="${i}" hidden />
                   </label>
                   ${col.image_url ? `<button type="button" class="btn btn--danger btn--sm col-img-remove" data-col="${i}">Quitar</button>` : ''}
+                  <input type="text" class="col-img-size-input" data-col="${i}" data-cfield="image_size"
+                    placeholder="100%" value="${escapeHtml(col.image_size || '')}"
+                    style="width:90px;font-size:12px;" title="Tamaño: ej. 200px, 40vw, 100%" />
                 </div>
+                <small style="color:var(--muted);font-size:11px">Tamaño (px, vw, %)</small>
                 <div class="col-img-uploading" hidden>Subiendo...</div>
               `;
             } else {
@@ -948,6 +952,10 @@ function openSectionModal(section) {
             c[idx][fkey] = inp.type === 'checkbox' ? inp.checked : inp.value;
             editorWrap.dataset.cols = JSON.stringify(c);
           });
+          // También guardar al perder foco (blur) para inputs de texto
+          if (inp.type === 'text' || inp.type === 'number') {
+            inp.addEventListener('blur', () => inp.dispatchEvent(new Event('change')));
+          }
         });
 
         // Subir imagen de columna
@@ -1130,7 +1138,6 @@ function contentFieldsFor(type) {
           { key: 'label',        label: 'Label pequeño', placeholder: 'DRESS CODE' },
           { key: 'title',        label: 'Título grande', placeholder: 'Elegante' },
           { key: 'text',         label: 'Texto descriptivo', placeholder: 'Colores claros y azul' },
-          { key: 'image_size',   label: 'Tamaño de imagen (ej: 200px, 40vw, 100%)', placeholder: '100%' },
         ]
       }
     ],
@@ -1146,7 +1153,6 @@ function contentFieldsFor(type) {
           { key: 'alias',       label: 'Alias (ej: MESA.ARBOL.MAR)', placeholder: 'MESA.ARBOL.MAR' },
           { key: 'mp_redirect', label: 'Redirigir a Mercado Pago', type: 'checkbox' },
           { key: 'mp_alias',    label: 'Alias de Mercado Pago (para link directo)', placeholder: 'MESA.ARBOL.MAR' },
-          { key: 'image_size',  label: 'Tamaño de imagen (ej: 200px, 40vw, 100%)', placeholder: '100%' },
         ]
       }
     ]
