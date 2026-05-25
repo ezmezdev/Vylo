@@ -140,7 +140,7 @@ function applySectionStyles(el, section, nextSection) {
     el.style.minHeight = (h.includes('vh') || h.includes('%')) ? h : `${parseInt(h)}px`;
   }
 
-  // Imagen de fondo
+  // Imagen de fondo — solo si esta sección tiene la suya propia
   if (section.bg_image_url) {
     const url = storageUrl(section.bg_image_url);
     const overlay = Math.min(Math.max(parseFloat(section.bg_overlay) || 0, 0), 1);
@@ -426,6 +426,26 @@ function renderCountdown(el, inv, content) {
   if (tick()) setInterval(tick, 1000);
 }
 
+function applyBtnColors(btn, content) {
+  if (!btn) return;
+  const bg    = content.button_bg    || '';
+  const color = content.button_color || '';
+  const bgH   = content.button_bg_hover    || '';
+  const colorH= content.button_color_hover || '';
+  if (bg)    btn.style.background = bg;
+  if (color) btn.style.color = color;
+  if (bgH || colorH) {
+    btn.addEventListener('mouseenter', () => {
+      if (bgH)    btn.style.background = bgH;
+      if (colorH) btn.style.color = colorH;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = bg || '';
+      btn.style.color = color || '';
+    });
+  }
+}
+
 function renderRsvp(el, inv, content) {
   el.querySelector('[data-field="title"]').textContent = content.title || 'Confirma tu asistencia';
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
@@ -433,6 +453,7 @@ function renderRsvp(el, inv, content) {
   const link = el.querySelector('[data-field="rsvp_link"]');
   link.href = inv.rsvp_form_url || '#';
   if (!inv.rsvp_form_url) link.setAttribute('aria-disabled', 'true');
+  applyBtnColors(link, content);
 }
 
 function renderCalendar(el, inv, content) {
@@ -440,9 +461,11 @@ function renderCalendar(el, inv, content) {
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
   el.querySelector('[data-field="button_text"]').textContent = content.button_text || 'Agregar al calendario';
 
-  // Mostrar/ocultar botón .ics
   const icalLink = el.querySelector('[data-action="add-ical"]');
   icalLink.hidden = !content.show_ics;
+
+  const googleBtn = el.querySelector('[data-action="add-google"]');
+  applyBtnColors(googleBtn, content);
 
   const start = new Date(inv.event_date);
   const durationH = Number(content.duration_hours) || 4;
@@ -451,8 +474,7 @@ function renderCalendar(el, inv, content) {
   const location = inv.calendar_location || '';
   const description = inv.calendar_description || '';
 
-  // Google Calendar
-  el.querySelector('[data-action="add-google"]').addEventListener('click', () => {
+  googleBtn.addEventListener('click', () => {
     const fmt = d => d.toISOString().replace(/[-:]|\.\d{3}/g, '');
     const url = new URL('https://calendar.google.com/calendar/render');
     url.searchParams.set('action', 'TEMPLATE');
@@ -463,7 +485,6 @@ function renderCalendar(el, inv, content) {
     window.open(url.toString(), '_blank', 'noopener');
   });
 
-  // .ics descargable
   const fmtIcs = d => d.toISOString().replace(/[-:]|\.\d{3}/g, '');
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Invitaciones//ES',
