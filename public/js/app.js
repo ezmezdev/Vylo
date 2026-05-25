@@ -548,7 +548,14 @@ function renderLocation(el, inv, content) {
 
 function buildColImage(item) {
   if (!item.image_url) return '';
-  return `<figure class="col__image-wrap">
+  // Tamaño configurable — por defecto 100% del ancho del contenedor
+  const size = item.image_size || '100%';
+  // Si el valor tiene unidad relativa (vw, %) aplica al width; si es px aplica max-width
+  const isRelative = size.includes('vw') || size === '100%' || size.includes('%');
+  const style = isRelative
+    ? `width:${size};max-width:100%;`
+    : `width:${size};max-width:100%;`;
+  return `<figure class="col__image-wrap" style="${style}">
     <img src="${storageUrl(item.image_url)}" alt="" class="col__image" loading="lazy" decoding="async" />
   </figure>`;
 }
