@@ -1249,7 +1249,18 @@ function contentFieldsFor(type) {
         ]
       },
     ],
-    countdown: common,
+    countdown: [
+      ...common,
+      { key: 'box_style', label: 'Estilo de los cuadros', type: 'select', full: true,
+        options: [
+          { value: 'square',   label: '⬜ Cuadrado (bordes rectos)' },
+          { value: 'rounded',  label: '🟦 Redondeado' },
+          { value: 'bevel',    label: '◻ Bisel tenue (sombra suave)' },
+          { value: 'circle',   label: '⭕ Circular' },
+          { value: 'minimal',  label: '— Minimal (sin caja, solo número)' },
+        ]
+      },
+    ],
     rsvp: [
       ...common,
       { key: 'button_text', label: 'Texto del botón', full: true },
