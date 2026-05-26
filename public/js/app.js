@@ -52,14 +52,22 @@ function initParticles(el, effect, intensity) {
 
   const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
-  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;';
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;';
   el.style.position = 'relative';
-  el.insertBefore(canvas, el.firstChild);
 
-  // Asegurar que el contenido quede encima
-  el.querySelectorAll(':scope > *:not(canvas):not(.section-bg-wrap)').forEach(child => {
-    if (!child.style.position) child.style.position = 'relative';
-    if (!child.style.zIndex)   child.style.zIndex   = '2';
+  // Insertar DESPUÉS del overlay/bg-img para no tapar la imagen de fondo
+  const overlay = el.querySelector('.hero__overlay');
+  const bgWrap  = el.querySelector('.section-bg-wrap');
+  const anchor  = overlay || bgWrap;
+  if (anchor && anchor.nextSibling) {
+    el.insertBefore(canvas, anchor.nextSibling);
+  } else {
+    el.appendChild(canvas);
+  }
+
+  // Asegurar que el contenido quede encima del canvas
+  el.querySelectorAll(':scope > *:not(canvas):not(.section-bg-wrap):not(.hero__bg-img):not(.hero__overlay)').forEach(child => {
+    if (!child.style.zIndex) child.style.zIndex = '4';
   });
 
   const ctx = canvas.getContext('2d');
