@@ -205,7 +205,9 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 .section--hero {
   min-height: 100vh;
-  height: 100vh; /* necesario para que margin-top:auto funcione */
+  min-height: 100dvh; /* dynamic viewport height — fix iOS Safari */
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
