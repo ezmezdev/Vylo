@@ -601,6 +601,19 @@ function renderCountdown(el, inv, content) {
   el.querySelector('[data-field="title"]').textContent = content.title || 'Cuenta regresiva';
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
 
+  // Aplicar estilo de cuadros
+  const units = el.querySelectorAll('.countdown__unit');
+  const boxStyle = content.box_style || 'square';
+  const styleMap = {
+    square:  'border-radius:0; box-shadow:none; border:1px solid var(--color-border,rgba(0,0,0,.1));',
+    rounded: 'border-radius:16px; box-shadow:none; border:1px solid var(--color-border,rgba(0,0,0,.1));',
+    bevel:   'border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.06); border:none;',
+    circle:  'border-radius:50%; aspect-ratio:1; border:1px solid var(--color-border,rgba(0,0,0,.1)); box-shadow:none;',
+    minimal: 'background:transparent !important; border:none; box-shadow:none; padding:0;',
+  };
+  const css = styleMap[boxStyle] || styleMap.square;
+  units.forEach(u => u.style.cssText += ';' + css);
+
   const target = new Date(inv.countdown_target || inv.event_date).getTime();
   const finished = el.querySelector('.countdown__finished');
   const cdEl = el.querySelector('.countdown');
