@@ -74,8 +74,8 @@ function initParticles(el, effect, intensity) {
   const count = Math.round(intensity); // 10-100
 
   function resize() {
-    canvas.width  = el.offsetWidth;
-    canvas.height = el.offsetHeight;
+    canvas.width  = el.offsetWidth  || window.innerWidth;
+    canvas.height = el.offsetHeight || window.innerHeight;
   }
   resize();
   const ro = new ResizeObserver(resize);
@@ -213,25 +213,35 @@ function initParticles(el, effect, intensity) {
   particles = Array.from({ length: count }, gen);
 
   let alive = true;
+  let rafId = null;
+
   function tick() {
-    if (!alive) return;
+    if (!alive) { rafId = null; return; }
     ctx.clearRect(0, 0, W(), H());
     ctx.globalAlpha = 1;
     for (let i = particles.length - 1; i >= 0; i--) {
       const dead = upd(particles[i]);
-      if (dead) particles[i] = gen(); // reciclar
+      if (dead) particles[i] = gen();
     }
     ctx.globalAlpha = 1;
-    requestAnimationFrame(tick);
+    rafId = requestAnimationFrame(tick);
   }
-  tick();
 
-  // Parar cuando la sección sale del viewport (performance)
+  // Parar/reanudar según visibilidad (ahorro de CPU)
   const io = new IntersectionObserver(entries => {
-    alive = entries[0].isIntersecting;
-    if (alive) tick();
-  }, { threshold: 0 });
+    const visible = entries[0].isIntersecting;
+    if (visible && !alive) {
+      alive = true;
+      tick();
+    } else if (!visible) {
+      alive = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+  }, { threshold: 0.01 });
   io.observe(el);
+
+  // Iniciar siempre — el observer ajustará si sale del viewport
+  tick();
 }
 
 /** Carga dinámicamente fuentes de Google */
