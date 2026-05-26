@@ -199,6 +199,61 @@ function toast(msg, type = 'success') {
   setTimeout(() => { t.hidden = true; }, 3000);
 }
 
+// ============================================================
+// COMPRESIÓN DE IMÁGENES (WebP, antes de subir a Supabase)
+// ============================================================
+// Estrategia:
+//   - Fondo de sección: máx 1920px ancho, calidad 0.82 WebP
+//   - Galería:          máx 1600px ancho, calidad 0.80 WebP
+//   - Columna (info/regalo): máx 1200px ancho, calidad 0.78 WebP
+// Resultado típico: JPG 3MB → WebP ~200-400KB sin pérdida visual perceptible
+
+async function compressImage(file, { maxW = 1920, maxH = 1920, quality = 0.82 } = {}) {
+  // Si el navegador no soporta canvas o ya es WebP pequeño, devolver tal cual
+  if (!file.type.startsWith('image/')) return file;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { naturalWidth: w, naturalHeight: h } = img;
+
+      // Escalar manteniendo proporción si supera el máximo
+      if (w > maxW || h > maxH) {
+        const ratio = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      // Fondo blanco para imágenes PNG con transparencia
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Intentar WebP primero, fallback a JPEG
+      const supportsWebP = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+      const mimeType = supportsWebP ? 'image/webp' : 'image/jpeg';
+
+      canvas.toBlob(blob => {
+        if (!blob) { resolve(file); return; }
+        // Solo usar comprimido si es más pequeño que el original
+        const compressed = blob.size < file.size ? blob : file;
+        const ext = supportsWebP ? 'webp' : 'jpg';
+        const name = file.name.replace(/\.[^.]+$/, '') + '.' + ext;
+        resolve(new File([compressed], name, { type: mimeType }));
+      }, mimeType, quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 function storageUrl(path) {
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -986,12 +1041,15 @@ function openSectionModal(section) {
         // Subir imagen de columna
         editorWrap.querySelectorAll('.col-img-input').forEach(fileInput => {
           fileInput.addEventListener('change', async () => {
-            const file = fileInput.files[0];
-            if (!file) return;
+            const rawFile = fileInput.files[0];
+            if (!rawFile) return;
             const idx = Number(fileInput.dataset.col);
             const uploadingEl = fileInput.closest('.col-field-content').querySelector('.col-img-uploading');
             if (uploadingEl) uploadingEl.hidden = false;
-            const ext = file.name.split('.').pop().toLowerCase();
+
+            // Comprimir antes de subir
+            const file = await compressImage(rawFile, { maxW: 1200, maxH: 1200, quality: 0.78 });
+            const ext  = file.name.split('.').pop().toLowerCase();
             const path = `${state.currentInvitation.id}/columns/col-${idx}-${Date.now()}.${ext}`;
             const { error: upErr } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
             if (uploadingEl) uploadingEl.hidden = true;
@@ -1362,10 +1420,12 @@ $('#section-modal form').addEventListener('submit', async e => {
 
   // Subir nueva imagen de fondo si se seleccionó
   if (bgFile && bgFile.size > 0) {
-    const ext = bgFile.name.split('.').pop().toLowerCase();
+    toast('Comprimiendo imagen...');
+    const compressed = await compressImage(bgFile, { maxW: 1920, maxH: 1920, quality: 0.82 });
+    const ext  = compressed.name.split('.').pop().toLowerCase();
     const path = `${state.currentInvitation.id}/sections/${section.id}-bg.${ext}`;
     const { error: upErr } = await sb.storage
-      .from(STORAGE_BUCKET).upload(path, bgFile, { upsert: true });
+      .from(STORAGE_BUCKET).upload(path, compressed, { upsert: true });
     if (upErr) { toast('Error subiendo imagen: ' + upErr.message, 'error'); return; }
     update.bg_image_url = path;
   }
@@ -1449,18 +1509,17 @@ $('#gallery-upload-input').addEventListener('change', async e => {
       toast(`${file.name} no es una imagen válida`, 'error');
       continue;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast(`${file.name} supera los 5MB`, 'error');
-      continue;
-    }
 
-    const ext = file.name.split('.').pop().toLowerCase();
+    // Comprimir antes de subir (sin límite de tamaño previo — la compresión lo maneja)
+    toast(`Comprimiendo ${file.name}...`);
+    const compressed = await compressImage(file, { maxW: 1600, maxH: 1600, quality: 0.80 });
+    const ext  = compressed.name.split('.').pop().toLowerCase();
     const path = `${state.currentInvitation.id}/gallery/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
 
-    console.log('[Gallery] Subiendo:', path);
+    console.log('[Gallery] Subiendo:', path, `(${Math.round(compressed.size/1024)}KB)`);
     const { error: upErr } = await sb.storage
       .from(STORAGE_BUCKET)
-      .upload(path, file, { cacheControl: '3600', upsert: false });
+      .upload(path, compressed, { cacheControl: '3600', upsert: false });
 
     if (upErr) {
       console.error('[Gallery] Error upload:', upErr);
