@@ -44,6 +44,188 @@ function loadSectionFont(fontName) {
   document.head.appendChild(link);
 }
 
+// ============================================================
+// MOTOR DE PARTÍCULAS
+// ============================================================
+function initParticles(el, effect, intensity) {
+  if (!effect || effect === 'none') return;
+
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;';
+  el.style.position = 'relative';
+  el.insertBefore(canvas, el.firstChild);
+
+  // Asegurar que el contenido quede encima
+  el.querySelectorAll(':scope > *:not(canvas):not(.section-bg-wrap)').forEach(child => {
+    if (!child.style.position) child.style.position = 'relative';
+    if (!child.style.zIndex)   child.style.zIndex   = '2';
+  });
+
+  const ctx = canvas.getContext('2d');
+  const count = Math.round(intensity); // 10-100
+
+  function resize() {
+    canvas.width  = el.offsetWidth;
+    canvas.height = el.offsetHeight;
+  }
+  resize();
+  const ro = new ResizeObserver(resize);
+  ro.observe(el);
+
+  let particles = [];
+  const W = () => canvas.width;
+  const H = () => canvas.height;
+
+  // ── Generadores por efecto ──
+  const generators = {
+    stars: () => ({
+      x: Math.random() * W(), y: Math.random() * H(),
+      r: Math.random() * 1.8 + .4,
+      a: Math.random(),
+      da: (.004 + Math.random() * .012) * (Math.random() < .5 ? 1 : -1),
+      color: ['#f5d060','#ffe8a0','#fff8dc','#ffd700'][Math.floor(Math.random()*4)]
+    }),
+    confetti: () => {
+      const cols = ['#f472b6','#60a5fa','#34d399','#fbbf24','#a78bfa','#fb7185','#38bdf8'];
+      return {
+        x: Math.random() * W(), y: -20 - Math.random() * H(),
+        w: 5 + Math.random() * 7, h: 3 + Math.random() * 4,
+        r: Math.random() * Math.PI * 2,
+        vx: (Math.random() - .5) * 1.5,
+        vy: .8 + Math.random() * 2,
+        vr: .03 + Math.random() * .08,
+        color: cols[Math.floor(Math.random() * cols.length)]
+      };
+    },
+    bubbles: () => ({
+      x: Math.random() * W(), y: H() + Math.random() * H() * .5,
+      r: 4 + Math.random() * 14,
+      vy: .2 + Math.random() * .6,
+      vx: (Math.random() - .5) * .4,
+      a: .2 + Math.random() * .4
+    }),
+    petals: () => {
+      const cols = ['#fda4af','#f9a8d4','#fbcfe8','#fecdd3','#f0abfc'];
+      return {
+        x: Math.random() * W(), y: -20 - Math.random() * H() * .5,
+        size: 4 + Math.random() * 9,
+        r: Math.random() * Math.PI * 2,
+        vr: .015 + Math.random() * .04,
+        vy: .4 + Math.random() * 1.2,
+        swing: Math.random() * Math.PI * 2,
+        vswing: .02 + Math.random() * .03,
+        color: cols[Math.floor(Math.random() * cols.length)]
+      };
+    },
+    snow: () => ({
+      x: Math.random() * W(), y: -10 - Math.random() * H() * .3,
+      r: .5 + Math.random() * 2.5,
+      vy: .15 + Math.random() * .7,
+      vx: (Math.random() - .5) * .3,
+      a: .4 + Math.random() * .6,
+      color: ['#c4b5fd','#e9d5ff','#ddd6fe','#ffffff'][Math.floor(Math.random()*4)]
+    }),
+    fireflies: () => ({
+      x: Math.random() * W(), y: Math.random() * H(),
+      tx: Math.random() * W(), ty: Math.random() * H(),
+      a: Math.random(), da: .015 + Math.random() * .025,
+      speed: .25 + Math.random() * .5,
+      color: ['#fde68a','#fef08a','#fcd34d'][Math.floor(Math.random()*3)]
+    })
+  };
+
+  // ── Updaters por efecto ──
+  const updaters = {
+    stars: p => {
+      p.a += p.da;
+      if (p.a >= 1 || p.a <= 0) p.da *= -1;
+      ctx.globalAlpha = Math.max(0, p.a);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+      return false;
+    },
+    confetti: p => {
+      p.y += p.vy; p.x += p.vx; p.r += p.vr;
+      ctx.globalAlpha = .85;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+      return p.y > H() + 20;
+    },
+    bubbles: p => {
+      p.y -= p.vy; p.x += p.vx;
+      ctx.globalAlpha = p.a;
+      ctx.strokeStyle = 'rgba(100,180,255,.6)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke();
+      return p.y < -p.r;
+    },
+    petals: p => {
+      p.y += p.vy; p.swing += p.vswing; p.r += p.vr;
+      p.x += Math.sin(p.swing) * .8;
+      ctx.globalAlpha = .8;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size*.45, 0, 0, Math.PI*2);
+      ctx.fill(); ctx.restore();
+      return p.y > H() + 20;
+    },
+    snow: p => {
+      p.y += p.vy; p.x += p.vx;
+      ctx.globalAlpha = p.a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+      return p.y > H() + 10;
+    },
+    fireflies: p => {
+      p.a += p.da;
+      if (p.a >= 1 || p.a <= 0) {
+        p.da *= -1;
+        if (p.a <= 0) { p.tx = Math.random()*W(); p.ty = Math.random()*H(); }
+      }
+      p.x += (p.tx - p.x) * p.speed * .018;
+      p.y += (p.ty - p.y) * p.speed * .018;
+      ctx.globalAlpha = Math.max(0, p.a);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      return false;
+    }
+  };
+
+  const gen = generators[effect];
+  const upd = updaters[effect];
+  if (!gen || !upd) return;
+
+  particles = Array.from({ length: count }, gen);
+
+  let alive = true;
+  function tick() {
+    if (!alive) return;
+    ctx.clearRect(0, 0, W(), H());
+    ctx.globalAlpha = 1;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const dead = upd(particles[i]);
+      if (dead) particles[i] = gen(); // reciclar
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Parar cuando la sección sale del viewport (performance)
+  const io = new IntersectionObserver(entries => {
+    alive = entries[0].isIntersecting;
+    if (alive) tick();
+  }, { threshold: 0 });
+  io.observe(el);
+}
+
 /** Carga dinámicamente fuentes de Google */
 function loadFonts(headingFont, bodyFont) {
   const fonts = new Set([headingFont, bodyFont].filter(Boolean));
@@ -823,6 +1005,10 @@ function renderSections({ invitation, sections, gallery }) {
       const node = tpl.content.firstElementChild.cloneNode(true);
       const nextSection = sections[idx + 1] || null;
       applySectionStyles(node, section, nextSection);
+
+      if (section.particle_effect && section.particle_effect !== 'none') {
+        initParticles(node, section.particle_effect, section.particle_intensity || 50);
+      }
 
       const renderer = RENDERERS[section.section_type];
       if (renderer) {
