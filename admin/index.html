@@ -423,6 +423,25 @@
               </select>
               <small>Los efectos de fondo requieren imagen de fondo cargada.</small>
             </label>
+
+            <label class="full">
+              <span>Efecto de partículas</span>
+              <select name="particle_effect">
+                <option value="none">— Sin partículas</option>
+                <option value="stars">✨ Estrellas titilantes</option>
+                <option value="confetti">🎊 Papel picado</option>
+                <option value="bubbles">🫧 Burbujas flotantes</option>
+                <option value="petals">🌸 Pétalos cayendo</option>
+                <option value="snow">❄️ Nieve / purpurina</option>
+                <option value="fireflies">🟡 Luciérnagas</option>
+              </select>
+            </label>
+
+            <label class="full" id="particle-intensity-wrap" hidden>
+              <span>Intensidad de partículas: <strong id="particle-intensity-val">50</strong></span>
+              <input type="range" name="particle_intensity" min="10" max="100" step="5" value="50" />
+              <small>Controla la cantidad de partículas (10 = pocas · 100 = muchas)</small>
+            </label>
           </div>
         </fieldset>
 

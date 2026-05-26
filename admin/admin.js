@@ -715,6 +715,24 @@ function openSectionModal(section) {
   f.top_transition.value = section.top_transition || 'none';
   f.motion_effect.value = section.motion_effect || 'none';
 
+  // Partículas
+  const particleSelect = f.particle_effect;
+  const particleWrap = document.getElementById('particle-intensity-wrap');
+  const particleIntensityInput = f.particle_intensity;
+  const particleIntensityVal = document.getElementById('particle-intensity-val');
+
+  particleSelect.value = section.particle_effect || 'none';
+  particleIntensityInput.value = section.particle_intensity || 50;
+  particleIntensityVal.textContent = particleIntensityInput.value;
+  particleWrap.hidden = particleSelect.value === 'none';
+
+  particleSelect.addEventListener('change', () => {
+    particleWrap.hidden = particleSelect.value === 'none';
+  });
+  particleIntensityInput.addEventListener('input', () => {
+    particleIntensityVal.textContent = particleIntensityInput.value;
+  });
+
   // Campos de contenido según el tipo
   const fieldsEl = $('#section-content-fields');
   fieldsEl.innerHTML = '';
@@ -1323,6 +1341,8 @@ $('#section-modal form').addEventListener('submit', async e => {
     bottom_transition: f.bottom_transition.value || 'none',
     top_transition: f.top_transition.value || 'none',
     motion_effect: f.motion_effect.value || 'none',
+    particle_effect: f.particle_effect.value || 'none',
+    particle_intensity: Number(f.particle_intensity.value) || 50,
     content
   };
 
