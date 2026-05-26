@@ -1046,9 +1046,53 @@ function openSectionModal(section) {
     fieldsEl.appendChild(label);
   });
 
-  // Preview imagen de fondo actual
+  // ── Imagen de fondo ──
+  const bgFileInput = modal.querySelector('[name="section_bg_image"]');
   const bgCurrent = $('#section-bg-current');
   const bgPreview = $('#section-bg-preview');
+
+  // SIEMPRE resetear el file input al abrir una sección nueva
+  bgFileInput.value = '';
+  modal._clearBg = false;
+
+  if (section.bg_image_url) {
+    bgPreview.src = storageUrl(section.bg_image_url);
+    bgPreview.hidden = false;
+    bgCurrent.textContent = 'Imagen actual guardada';
+  } else {
+    bgPreview.src = '';
+    bgPreview.hidden = true;
+    bgCurrent.textContent = '';
+  }
+
+  // Usar clone para eliminar listeners anteriores acumulados
+  const bgFileInputClone = bgFileInput.cloneNode(true);
+  bgFileInput.parentNode.replaceChild(bgFileInputClone, bgFileInput);
+  bgFileInputClone.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      bgPreview.src = ev.target.result;
+      bgPreview.hidden = false;
+      bgCurrent.textContent = '(nueva imagen — se guardará)';
+    };
+    reader.readAsDataURL(file);
+    modal._clearBg = false;
+  });
+
+  const clearBgBtn = $('#clear-section-bg');
+  const clearBgClone = clearBgBtn.cloneNode(true);
+  clearBgBtn.parentNode.replaceChild(clearBgClone, clearBgBtn);
+  clearBgClone.addEventListener('click', () => {
+    bgFileInputClone.value = '';
+    bgPreview.src = '';
+    bgPreview.hidden = true;
+    bgCurrent.textContent = '(se quitará al guardar)';
+    modal._clearBg = true;
+  });
+
+  // Overlay y blur
   const overlayInput = modal.querySelector('[name="bg_overlay"]');
   const overlayValue = $('#bg-overlay-value');
   const minHeightInput = modal.querySelector('[name="min_height"]');
@@ -1085,32 +1129,6 @@ function openSectionModal(section) {
   blurInput.addEventListener('input', () => {
     blurValue.textContent = blurInput.value;
   });
-
-  if (section.bg_image_url) {
-    bgPreview.src = storageUrl(section.bg_image_url);
-    bgPreview.hidden = false;
-    bgCurrent.textContent = 'Imagen actual guardada';
-  } else {
-    bgPreview.hidden = true;
-    bgCurrent.textContent = '';
-  }
-
-  // Preview al seleccionar nueva imagen
-  modal.querySelector('[name="section_bg_image"]').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => { bgPreview.src = ev.target.result; bgPreview.hidden = false; };
-    reader.readAsDataURL(file);
-  });
-
-  $('#clear-section-bg').addEventListener('click', () => {
-    modal.querySelector('[name="section_bg_image"]').value = '';
-    bgPreview.hidden = true;
-    bgCurrent.textContent = '(se quitará al guardar)';
-    modal._clearBg = true;
-  });
-  modal._clearBg = false;
 
   modal.showModal();
 }
@@ -1307,7 +1325,7 @@ $('#section-modal form').addEventListener('submit', async e => {
   console.log('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
   console.log('[Modal] Update a guardar:', update);
 
-  // Imagen de fondo
+  // Imagen de fondo — leer desde el FormData (incluye el input clonado)
   const bgFile = fd.get('section_bg_image');
 
   // Quitar imagen de fondo
