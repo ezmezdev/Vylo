@@ -1068,9 +1068,12 @@ function openSectionModal(section) {
   // Usar clone para eliminar listeners anteriores acumulados
   const bgFileInputClone = bgFileInput.cloneNode(true);
   bgFileInput.parentNode.replaceChild(bgFileInputClone, bgFileInput);
+  modal._bgFile = null; // resetear archivo pendiente
+
   bgFileInputClone.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
+    modal._bgFile = file; // guardar referencia directa
     const reader = new FileReader();
     reader.onload = ev => {
       bgPreview.src = ev.target.result;
@@ -1086,6 +1089,7 @@ function openSectionModal(section) {
   clearBgBtn.parentNode.replaceChild(clearBgClone, clearBgBtn);
   clearBgClone.addEventListener('click', () => {
     bgFileInputClone.value = '';
+    modal._bgFile = null;
     bgPreview.src = '';
     bgPreview.hidden = true;
     bgCurrent.textContent = '(se quitará al guardar)';
@@ -1325,8 +1329,8 @@ $('#section-modal form').addEventListener('submit', async e => {
   console.log('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
   console.log('[Modal] Update a guardar:', update);
 
-  // Imagen de fondo — leer desde el FormData (incluye el input clonado)
-  const bgFile = fd.get('section_bg_image');
+  // Imagen de fondo — leer desde modal._bgFile (el input fue clonado fuera del form)
+  const bgFile = modal._bgFile || null;
 
   // Quitar imagen de fondo
   if (modal._clearBg) {
