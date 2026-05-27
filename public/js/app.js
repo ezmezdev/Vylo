@@ -882,9 +882,20 @@ function renderFooter(el, inv, content) {
   tagEl.textContent = tagText;
   tagEl.hidden = !tagText;
 
-  // Logo Vylo
+  // Logo Vylo — con link opcional
   const brandEl = el.querySelector('[data-field="brand"]');
   brandEl.hidden = content.show_logo === false;
+  if (content.vylo_link && !brandEl.hidden) {
+    const img = brandEl.querySelector('img');
+    const link = document.createElement('a');
+    link.href = content.vylo_link;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.setAttribute('aria-label', 'Vylo — invitaciones digitales');
+    link.appendChild(img.cloneNode());
+    brandEl.innerHTML = '';
+    brandEl.appendChild(link);
+  }
 }
 
 function renderInfo(el, inv, content) {
