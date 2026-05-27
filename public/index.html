@@ -50,20 +50,8 @@
     <!-- Las secciones se renderizan dinámicamente desde JS según la configuración -->
     <div id="sections-container"></div>
 
-    <!-- Footer fijo, siempre visible -->
-    <footer class="footer" role="contentinfo">
-      <div class="footer__inner">
-        <p class="footer__hosts" id="footer-hosts"></p>
-        <p class="footer__event" id="footer-event"></p>
-        <p class="footer__small">Invitación digital</p>
-        <div class="footer__brand" aria-label="Vylo">
-          <img src="./assets/vylo-footer.png"
-               alt="Vylo"
-               class="footer__vylo-img"
-               loading="lazy"
-               decoding="async" />
-        </div>
-    </footer>
+    <!-- Footer renderizado dinámicamente como sección -->
+    <div id="footer-container"></div>
   </main>
 
   <!-- ===== Templates de secciones (clonados desde JS) ===== -->
@@ -248,5 +236,21 @@
   <script src="./js/config.js"></script>
   <!-- App principal -->
   <script src="./js/app.js"></script>
+
+  <!-- ===== Template: Footer (sección especial) ===== -->
+  <template id="tpl-footer">
+    <footer class="section section--footer" role="contentinfo" data-section="footer">
+      <div class="section__inner footer__inner">
+        <p class="footer__hosts"  data-field="hosts"></p>
+        <p class="footer__event"  data-field="event"></p>
+        <p class="footer__date"   data-field="date"></p>
+        <p class="footer__tagline" data-field="tagline">Invitación digital</p>
+        <div class="footer__brand" data-field="brand" aria-label="Vylo">
+          <img src="./assets/vylo-footer.png" alt="Vylo" class="footer__vylo-img"
+               loading="lazy" decoding="async" />
+        </div>
+      </div>
+    </footer>
+  </template>
 </body>
 </html>
