@@ -663,14 +663,15 @@ function renderSectionsList() {
 
 function sectionLabel(type) {
   return ({
-    hero: 'Portada (Hero)',
+    hero:      'Portada (Hero)',
     countdown: 'Contador regresivo',
-    rsvp: 'Confirmación (RSVP)',
-    calendar: 'Calendario',
-    gallery: 'Galería',
-    location: 'Ubicación',
-    info:     'Info (columnas)',
-    gift:     'Regalo / Alias',
+    rsvp:      'Confirmación (RSVP)',
+    calendar:  'Calendario',
+    gallery:   'Galería',
+    location:  'Ubicación',
+    info:      'Info (columnas)',
+    gift:      'Regalo / Alias',
+    footer:    'Footer (pie de página)',
   })[type] || type;
 }
 
@@ -739,6 +740,7 @@ function defaultContentFor(type) {
     calendar:  { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 },
     gallery:   { title: 'Galería', subtitle: '' },
     location:  { eyebrow: '¿Dónde?', title: '', address: '', map_height: 380, map_height_mobile: 260 },
+    footer:    { tagline: 'Invitación digital', show_hosts: true, show_event: true, show_date: false, show_logo: true },
     info:      { title: '', subtitle: '', columns: [] },
     gift:      { title: 'Regalo', subtitle: '', columns: [] }
   })[type] || {};
@@ -1306,6 +1308,14 @@ function contentFieldsFor(type) {
         help: 'Altura en desktop. Default: 380px' },
       { key: 'map_height_mobile', label: 'Altura mapa mobile (px)', type: 'number', min: 150, max: 500,
         help: 'Altura en mobile. Default: 260px' },
+    ],
+    footer: [
+      { key: 'tagline',    label: 'Texto pequeño (ej: Invitación digital)', full: true,
+        help: 'Dejalo vacío para ocultarlo' },
+      { key: 'show_hosts', label: 'Mostrar nombre del/los anfitriones', type: 'checkbox' },
+      { key: 'show_event', label: 'Mostrar tipo y título del evento',   type: 'checkbox' },
+      { key: 'show_date',  label: 'Mostrar fecha del evento',           type: 'checkbox' },
+      { key: 'show_logo',  label: 'Mostrar logo Vylo',                  type: 'checkbox' },
     ],
     info: [
       { key: 'title', label: 'Título (opcional)', full: true },
