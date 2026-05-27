@@ -180,8 +180,13 @@ a { color: inherit; text-decoration: none; }
 
 .section__inner {
   max-width: 960px;
+  width: 100%;
   margin: 0 auto;
   text-align: center;
+  /* Padding lateral en mobile para que el contenido no toque el borde */
+  padding-left: clamp(1rem, 4vw, 2rem);
+  padding-right: clamp(1rem, 4vw, 2rem);
+  box-sizing: border-box;
 }
 
 .section__title {
@@ -342,36 +347,46 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    COUNTDOWN
    ============================================================ */
+/* ── Countdown mobile-first ── */
 .countdown {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  max-width: 640px;
+  /* Mobile: 2 columnas, cada una ocupa máx el espacio disponible */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 560px;
   margin: 0 auto;
 }
 .countdown__unit {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 0.5rem;
+  justify-content: center;
+  /* Padding proporcional al viewport en mobile */
+  padding: clamp(1rem, 4vw, 1.75rem) clamp(0.5rem, 2vw, 1rem);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255,255,255,0.4);
   backdrop-filter: blur(8px);
+  /* Altura mínima proporcional para que sean cuadrados en mobile */
+  min-height: clamp(80px, 20vw, 140px);
+  /* Para el estilo circle — mantener proporción */
+  box-sizing: border-box;
 }
 .countdown__num {
   font-family: var(--section-heading-font, var(--font-heading));
-  font-size: clamp(2rem, 6vw, 3.5rem);
+  /* clamp: 1.8rem en móvil chico, proporcional, máx 3.5rem en desktop */
+  font-size: clamp(1.8rem, 8vw, 3.5rem);
   font-weight: 400;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .countdown__label {
-  font-size: 0.75rem;
+  font-size: clamp(0.55rem, 1.8vw, 0.75rem);
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.18em;
   color: var(--color-muted);
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }
 .countdown__finished {
   font-family: var(--section-heading-font, var(--font-heading));
@@ -379,6 +394,17 @@ a { color: inherit; text-decoration: none; }
   font-size: 1.5rem;
   color: var(--color-accent);
   margin-top: 1rem;
+}
+
+/* Tablet 480px+: 4 columnas en una fila */
+@media (min-width: 480px) {
+  .countdown {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 640px;
+  }
+  .countdown__unit {
+    min-height: unset;
+  }
 }
 
 /* ============================================================
@@ -709,32 +735,42 @@ a { color: inherit; text-decoration: none; }
 
 /* Base mobile (< 640px): ya definido arriba con clamp() y unidades fluidas */
 
+/* ============================================================
+   RESPONSIVE — Mobile First
+   ============================================================ */
+
+/* Base mobile: ya está definido arriba con clamp() y mobile-first */
+
 /* Tablet 640px+ */
 @media (min-width: 640px) {
   :root { --space-xl: 5rem; }
-  .countdown { gap: 1rem; }
   .calendar__buttons { flex-direction: row; }
   .btn { padding: 1rem 2.5rem; }
+  .section__inner { max-width: 760px; }
 }
 
 /* Desktop 1024px+ */
 @media (min-width: 1024px) {
   :root { --space-xl: 6rem; --space-lg: 4rem; }
+  .section__inner { max-width: 900px; }
 }
 
-/* Mobile pequeño (< 480px) */
-@media (max-width: 480px) {
+/* Mobile pequeño (< 480px) — ajustes adicionales */
+@media (max-width: 479px) {
   :root { --space-xl: 3rem; --space-lg: 2.5rem; }
   .section { padding-left: 1rem; padding-right: 1rem; }
-  .countdown { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .countdown__unit { padding: 1rem 0.5rem; }
-  .countdown__num { font-size: clamp(1.75rem, 8vw, 2.5rem); }
-  .countdown__label { font-size: 0.625rem; letter-spacing: 0.1em; }
   .hero__date::before, .hero__date::after { display: none; }
   .btn { padding: 0.875rem 1.5rem; font-size: 0.875rem; }
   .calendar__buttons { flex-direction: column; align-items: stretch; }
   .lightbox__nav { width: 36px; height: 36px; font-size: 1.25rem; }
-  .section__title { font-size: clamp(1.75rem, 8vw, 2.5rem); }
+  .section__title { font-size: clamp(1.75rem, 9vw, 2.5rem); }
+  .hero__title { font-size: clamp(2.5rem, 12vw, 5rem) !important; }
+  /* Info y gift columns: una columna en mobile */
+  .info__cols, .gift__cols { grid-template-columns: 1fr; }
+  /* Location map height reducida */
+  .location__map { height: 220px; }
+  /* Footer */
+  .section--footer .footer__hosts { font-size: 1.4rem; }
 }
 
 /* El contenedor de secciones no debe cortar los SVGs de transición */
