@@ -314,10 +314,6 @@ function applyTheme(inv) {
   if (inv.hero_image_url) {
     document.getElementById('og-image').content = storageUrl(inv.hero_image_url);
   }
-
-  document.getElementById('footer-hosts').textContent = inv.host_names;
-  document.getElementById('footer-event').textContent =
-    `${inv.event_title} · ${formatDate(inv.event_date)}`;
 }
 
 function applySectionStyles(el, section, nextSection) {
@@ -863,6 +859,34 @@ function buildColImage(item) {
   </figure>`;
 }
 
+function renderFooter(el, inv, content) {
+  // Hosts
+  const hostsEl = el.querySelector('[data-field="hosts"]');
+  hostsEl.textContent = inv.host_names || '';
+  hostsEl.hidden = content.show_hosts === false;
+
+  // Evento (tipo + título)
+  const eventEl = el.querySelector('[data-field="event"]');
+  const eventTxt = [inv.event_type?.replace(/_/g,' '), inv.event_title].filter(Boolean).join(' · ');
+  eventEl.textContent = eventTxt;
+  eventEl.hidden = content.show_event === false || !eventTxt;
+
+  // Fecha
+  const dateEl = el.querySelector('[data-field="date"]');
+  dateEl.textContent = formatDate(inv.event_date);
+  dateEl.hidden = content.show_date === false;
+
+  // Tagline
+  const tagEl = el.querySelector('[data-field="tagline"]');
+  const tagText = content.tagline !== undefined ? content.tagline : 'Invitación digital';
+  tagEl.textContent = tagText;
+  tagEl.hidden = !tagText;
+
+  // Logo Vylo
+  const brandEl = el.querySelector('[data-field="brand"]');
+  brandEl.hidden = content.show_logo === false;
+}
+
 function renderInfo(el, inv, content) {
   const titleEl = el.querySelector('[data-field="title"]');
   const subtitleEl = el.querySelector('[data-field="subtitle"]');
@@ -1010,18 +1034,20 @@ function closeAliasModal() {
 }
 
 const RENDERERS = {
-  hero: renderHero,
+  hero:      renderHero,
   countdown: renderCountdown,
-  rsvp: renderRsvp,
-  calendar: renderCalendar,
-  gallery: renderGallery,
-  location: renderLocation,
-  info: renderInfo,
-  gift: renderGift,
+  rsvp:      renderRsvp,
+  calendar:  renderCalendar,
+  gallery:   renderGallery,
+  location:  renderLocation,
+  info:      renderInfo,
+  gift:      renderGift,
+  footer:    renderFooter,
 };
 
 function renderSections({ invitation, sections, gallery }) {
   const container = document.getElementById('sections-container');
+  const footerContainer = document.getElementById('footer-container');
   console.log('[Landing] Renderizando', sections.length, 'secciones');
 
   sections.forEach((section, idx) => {
@@ -1034,11 +1060,17 @@ function renderSections({ invitation, sections, gallery }) {
       }
 
       const node = tpl.content.firstElementChild.cloneNode(true);
-      const nextSection = sections[idx + 1] || null;
-      applySectionStyles(node, section, nextSection);
 
-      if (section.particle_effect && section.particle_effect !== 'none') {
-        initParticles(node, section.particle_effect, section.particle_intensity || 50);
+      // El footer va en su propio contenedor, al final
+      const isFooter = section.section_type === 'footer';
+      const target = isFooter ? footerContainer : container;
+
+      if (!isFooter) {
+        const nextSection = sections[idx + 1] || null;
+        applySectionStyles(node, section, nextSection);
+        if (section.particle_effect && section.particle_effect !== 'none') {
+          initParticles(node, section.particle_effect, section.particle_intensity || 50);
+        }
       }
 
       const renderer = RENDERERS[section.section_type];
@@ -1051,7 +1083,7 @@ function renderSections({ invitation, sections, gallery }) {
           renderer(node, invitation, section.content || {});
         }
       }
-      container.appendChild(node);
+      target.appendChild(node);
       console.log('[Landing] Sección OK:', section.section_type);
     } catch(e) {
       console.error('[Landing] Error en sección', section.section_type, ':', e);
