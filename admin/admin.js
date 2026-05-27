@@ -1312,6 +1312,8 @@ function contentFieldsFor(type) {
     footer: [
       { key: 'tagline',    label: 'Texto pequeño (ej: Invitación digital)', full: true,
         help: 'Dejalo vacío para ocultarlo' },
+      { key: 'vylo_link',  label: 'Link del logo Vylo', full: true,
+        help: 'URL a la que lleva el logo al hacer click (ej: https://vylo.com.ar)' },
       { key: 'show_hosts', label: 'Mostrar nombre del/los anfitriones', type: 'checkbox' },
       { key: 'show_event', label: 'Mostrar tipo y título del evento',   type: 'checkbox' },
       { key: 'show_date',  label: 'Mostrar fecha del evento',           type: 'checkbox' },
@@ -1371,14 +1373,14 @@ $('#section-modal form').addEventListener('submit', async e => {
   const content = { ...(section.content || {}) };
   const stringFields = ['title','subtitle','eyebrow','quote','button_text','layout',
     'text_position','text_size','text_weight',
-    'button_bg','button_color','button_bg_hover','button_color_hover'];
+    'button_bg','button_color','button_bg_hover','button_color_hover',
+    'tagline','vylo_link','box_style'];
   const colorFields = ['button_bg','button_color','button_bg_hover','button_color_hover'];
 
   for (const [key, value] of fd.entries()) {
     if (key.startsWith('content_')) {
       const k = key.replace('content_', '');
       if (colorFields.includes(k)) {
-        // Input color devuelve #000000 cuando está vacío — guardarlo como null
         content[k] = (value && value !== '#000000') ? value : null;
       } else if (stringFields.includes(k)) {
         content[k] = value;
@@ -1394,7 +1396,9 @@ $('#section-modal form').addEventListener('submit', async e => {
     console.log('[Modal] Columnas guardadas:', JSON.stringify(cols));
     content.columns = cols;
   }
-  const checkboxFields = ['show_ics'];
+
+  // Checkboxes — no aparecen en FormData si están desmarcados, leer del DOM
+  const checkboxFields = ['show_ics','show_hosts','show_event','show_date','show_logo'];
   checkboxFields.forEach(k => {
     const el = f.querySelector(`[name="content_${k}"]`);
     if (el) content[k] = el.checked;
