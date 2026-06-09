@@ -851,3 +851,136 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
   padding: 2px;
   background: var(--input-bg);
 }
+
+/* ============================================================
+   MODAL CON VISTA PREVIA
+   ============================================================ */
+
+/* Modal expandido cuando tiene preview */
+.modal--with-preview {
+  max-width: min(98vw, 1400px);
+  width: 98vw;
+}
+
+/* Layout de dos columnas */
+.modal__layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Panel editor (izquierda) */
+.modal--with-preview .modal__body {
+  width: 420px;
+  min-width: 320px;
+  max-width: 480px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+/* Cuando no hay preview el editor ocupa todo */
+.modal--with-preview .modal__preview[hidden] ~ * .modal__body,
+.modal--with-preview:not(.preview-open) .modal__body {
+  width: 100%;
+  max-width: 100%;
+  border-right: none;
+}
+
+/* Panel preview (derecha) */
+.modal__preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg);
+}
+.modal__preview[hidden] { display: none !important; }
+
+/* Header del modal con acciones */
+.modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Toolbar de preview */
+.preview__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.preview__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.preview__device-btns {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+.preview__device-btn {
+  width: 28px; height: 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.preview__device-btn:hover { border-color: var(--accent); color: var(--accent); }
+.preview__device-btn.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Contenedor del iframe con fondo de cuadrícula para ver el device */
+.preview__frame-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  padding: 1rem;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(128,128,128,.03) 10px,
+      rgba(128,128,128,.03) 20px
+    ), var(--bg);
+}
+
+/* El iframe con distintos tamaños según device */
+.preview__iframe {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+  background: #fff;
+  transition: width 0.3s ease, height 0.3s ease;
+}
+.preview__iframe[data-device="mobile"]  { width: 390px;  height: 844px; }
+.preview__iframe[data-device="tablet"]  { width: 768px;  height: 1024px; }
+.preview__iframe[data-device="desktop"] { width: 100%;   height: 100%;  border-radius: 8px; }
+
+/* Botón de preview activo */
+#preview-toggle-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Responsive — en pantallas chicas el preview va abajo */
+@media (max-width: 900px) {
+  .modal__layout { flex-direction: column; }
+  .modal--with-preview .modal__body { width: 100%; max-width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 50vh; }
+  .modal__preview { min-height: 300px; }
+  .preview__iframe[data-device="mobile"] { width: 320px; height: 568px; }
+}

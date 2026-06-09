@@ -1213,6 +1213,11 @@ function openSectionModal(section) {
   });
 
   modal.showModal();
+
+  // Restaurar estado del preview si estaba abierto
+  if (localStorage.getItem('vylo-preview-open') === '1') {
+    openPreview();
+  }
 }
 
 function contentFieldsFor(type) {
@@ -1461,6 +1466,7 @@ $('#section-modal form').addEventListener('submit', async e => {
 
   Object.assign(section, update);
   renderSectionsList();
+  reloadPreviewAfterSave();
   $('#section-modal').close();
   toast('Sección actualizada');
 });
@@ -1777,6 +1783,73 @@ $('#form-new-link').addEventListener('submit', async e => {
   toast(`Link creado: ${SHORT_BASE}/${code} ✓`);
   loadLinks();
 });
+
+// ============================================================
+// PREVIEW EN TIEMPO REAL
+// ============================================================
+const previewToggleBtn = document.getElementById('preview-toggle-btn');
+const previewPanel     = document.getElementById('modal-preview-panel');
+const previewIframe    = document.getElementById('preview-iframe');
+const previewReloadBtn = document.getElementById('preview-reload-btn');
+const previewFrameWrap = document.getElementById('preview-frame-wrap');
+const deviceBtns       = document.querySelectorAll('.preview__device-btn');
+
+let previewOpen = false;
+
+function getPreviewUrl() {
+  const inv = state.currentInvitation;
+  if (!inv) return '';
+  return `${window.location.origin}/public/?i=${inv.slug}`;
+}
+
+function openPreview() {
+  previewOpen = true;
+  previewPanel.hidden = false;
+  previewToggleBtn.classList.add('is-active');
+  document.getElementById('section-modal').classList.add('preview-open');
+  if (!previewIframe.src || previewIframe.src === window.location.href) {
+    previewIframe.src = getPreviewUrl();
+  }
+  localStorage.setItem('vylo-preview-open', '1');
+}
+
+function closePreview() {
+  previewOpen = false;
+  previewPanel.hidden = true;
+  previewToggleBtn.classList.remove('is-active');
+  document.getElementById('section-modal').classList.remove('preview-open');
+  localStorage.setItem('vylo-preview-open', '0');
+}
+
+function reloadPreview() {
+  if (!previewOpen) return;
+  previewIframe.src = getPreviewUrl() + '&t=' + Date.now();
+}
+
+previewToggleBtn.addEventListener('click', () => {
+  previewOpen ? closePreview() : openPreview();
+});
+
+previewReloadBtn.addEventListener('click', reloadPreview);
+
+// Selector de dispositivo
+deviceBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    deviceBtns.forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    const device = btn.dataset.device;
+    previewIframe.dataset.device = device;
+    previewIframe.setAttribute('data-device', device);
+    // Para desktop, ajustar el frame-wrap
+    previewFrameWrap.style.alignItems = device === 'desktop' ? 'stretch' : 'flex-start';
+  });
+});
+
+// Recargar preview automáticamente después de guardar una sección
+function reloadPreviewAfterSave() {
+  if (!previewOpen) return;
+  setTimeout(() => reloadPreview(), 800); // pequeño delay para que Supabase actualice
+}
 
 // ============================================================
 // INICIO
