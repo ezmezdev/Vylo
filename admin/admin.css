@@ -852,75 +852,51 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
   background: var(--input-bg);
 }
 
+
 /* ============================================================
-   MODAL CON VISTA PREVIA
+   DRAWER DE EDICIÓN DE SECCIÓN CON PREVIEW
    ============================================================ */
-
-/* Modal expandido cuando tiene preview */
-.modal--with-preview {
-  max-width: min(98vw, 1400px);
-  width: 98vw;
-}
-
-/* Layout de dos columnas */
-.modal__layout {
+.section-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   display: flex;
-  flex: 1;
-  min-height: 0;
+  background: var(--bg);
+}
+.section-drawer[hidden] { display: none !important; }
+
+.drawer__form {
+  display: flex;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
-/* Panel editor (izquierda) */
-.modal--with-preview .modal__body {
-  width: 420px;
-  min-width: 320px;
-  max-width: 480px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-}
-
-/* Cuando no hay preview el editor ocupa todo */
-.modal--with-preview .modal__preview[hidden] ~ * .modal__body,
-.modal--with-preview:not(.preview-open) .modal__body {
-  width: 100%;
-  max-width: 100%;
-  border-right: none;
-}
-
-/* Panel preview (derecha) */
-.modal__preview {
+/* ── Preview (lado izquierdo) ── */
+.drawer__preview {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  background: var(--bg);
-}
-.modal__preview[hidden] { display: none !important; }
-
-/* Header del modal con acciones */
-.modal__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  background: #0f1117;
+  border-right: 1px solid var(--border);
 }
 
-/* Toolbar de preview */
 .preview__toolbar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  padding: 0.6rem 1rem;
+  background: #1a1d27;
+  border-bottom: 1px solid rgba(255,255,255,.08);
   flex-shrink: 0;
 }
 .preview__label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--muted);
+  color: rgba(255,255,255,.4);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 .preview__device-btns {
   display: flex;
@@ -928,11 +904,11 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
   margin-left: auto;
 }
 .preview__device-btn {
-  width: 28px; height: 28px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.4);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
@@ -940,47 +916,92 @@ fieldset legend { padding: 0 0.5rem; font-weight: 500; font-size: 13px; color: v
 .preview__device-btn:hover { border-color: var(--accent); color: var(--accent); }
 .preview__device-btn.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-/* Contenedor del iframe con fondo de cuadrícula para ver el device */
 .preview__frame-wrap {
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   overflow: auto;
-  padding: 1rem;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 10px,
-      rgba(128,128,128,.03) 10px,
-      rgba(128,128,128,.03) 20px
-    ), var(--bg);
+  padding: 1.5rem;
 }
 
-/* El iframe con distintos tamaños según device */
 .preview__iframe {
   border: none;
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+  border-radius: 16px;
+  box-shadow: 0 8px 48px rgba(0,0,0,.6);
   background: #fff;
+  flex-shrink: 0;
   transition: width 0.3s ease, height 0.3s ease;
 }
-.preview__iframe[data-device="mobile"]  { width: 390px;  height: 844px; }
-.preview__iframe[data-device="tablet"]  { width: 768px;  height: 1024px; }
-.preview__iframe[data-device="desktop"] { width: 100%;   height: 100%;  border-radius: 8px; }
-
-/* Botón de preview activo */
-#preview-toggle-btn.is-active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+.preview__iframe[data-device="mobile"]  { width: 390px;  height: 100%; max-height: 844px; }
+.preview__iframe[data-device="tablet"]  { width: 768px;  height: 100%; max-height: 1024px; }
+.preview__iframe[data-device="desktop"] {
+  width: 100%; height: 100%;
+  border-radius: 8px;
+  align-self: stretch;
 }
 
-/* Responsive — en pantallas chicas el preview va abajo */
-@media (max-width: 900px) {
-  .modal__layout { flex-direction: column; }
-  .modal--with-preview .modal__body { width: 100%; max-width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 50vh; }
-  .modal__preview { min-height: 300px; }
-  .preview__iframe[data-device="mobile"] { width: 320px; height: 568px; }
+/* ── Editor (lado derecho) ── */
+.drawer__editor {
+  width: 440px;
+  min-width: 360px;
+  max-width: 480px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
+  box-shadow: -4px 0 20px rgba(0,0,0,.15);
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.drawer__header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+.drawer__close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.drawer__close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.drawer__footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+/* ── Responsive mobile: editor encima, preview debajo ── */
+@media (max-width: 768px) {
+  .drawer__form { flex-direction: column-reverse; }
+  .drawer__editor { width: 100%; max-width: 100%; height: 55%; box-shadow: 0 -4px 20px rgba(0,0,0,.15); }
+  .drawer__preview { height: 45%; border-right: none; border-top: 1px solid var(--border); }
+  .preview__iframe[data-device="mobile"] { width: 200px; max-height: 100%; }
 }

@@ -281,23 +281,45 @@
     </main>
   </div>
 
-  <!-- ===== Modal de edición de sección ===== -->
-  <dialog id="section-modal" class="modal modal--with-preview" aria-labelledby="section-modal-title">
-    <form method="dialog" class="modal__form">
-      <header class="modal__header">
-        <h3 id="section-modal-title">Editar sección</h3>
-        <div class="modal__header-actions">
-          <button type="button" id="preview-toggle-btn" class="btn btn--ghost btn--sm" title="Mostrar/ocultar vista previa">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-            </svg>
-            Vista previa
-          </button>
-          <button type="button" class="modal__close" aria-label="Cerrar">×</button>
+  <!-- ===== Editor de sección (drawer fullscreen) ===== -->
+  <div id="section-drawer" class="section-drawer" hidden aria-labelledby="section-modal-title">
+    <form id="section-drawer-form" class="drawer__form">
+      <!-- Preview panel (izquierda) -->
+      <div class="drawer__preview">
+        <div class="preview__toolbar">
+          <span class="preview__label">Vista previa</span>
+          <div class="preview__device-btns">
+            <button type="button" class="preview__device-btn is-active" data-device="mobile" title="Mobile">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/>
+              </svg>
+            </button>
+            <button type="button" class="preview__device-btn" data-device="tablet" title="Tablet">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+            </button>
+            <button type="button" class="preview__device-btn" data-device="desktop" title="Desktop">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+              </svg>
+            </button>
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" id="preview-reload-btn">↺ Recargar</button>
         </div>
-      </header>
-      <div class="modal__layout">
-        <div class="modal__body">
+        <div class="preview__frame-wrap" id="preview-frame-wrap">
+          <iframe id="preview-iframe" class="preview__iframe" data-device="mobile"
+                  title="Vista previa" src=""></iframe>
+        </div>
+      </div>
+
+      <!-- Editor panel (derecha) -->
+      <div class="drawer__editor">
+        <header class="drawer__header">
+          <h3 id="section-modal-title">Editar sección</h3>
+          <button type="button" class="drawer__close" id="drawer-close-btn" aria-label="Cerrar">×</button>
+        </header>
+        <div class="drawer__body">
         <label class="checkbox">
           <input type="checkbox" name="is_enabled" />
           <span>Sección habilitada</span>
@@ -460,12 +482,14 @@
           <div id="section-content-fields" class="form-grid"></div>
         </fieldset>
       </div>
-      <footer class="modal__footer">
-        <button type="button" class="btn btn--ghost" data-action="close">Cancelar</button>
-        <button type="submit" class="btn btn--primary">Guardar sección</button>
-      </footer>
+        </div><!-- /drawer__body -->
+        <footer class="drawer__footer">
+          <button type="button" class="btn btn--ghost" id="cancel-section-btn">Cancelar</button>
+          <button type="submit" class="btn btn--primary">Guardar sección</button>
+        </footer>
+      </div><!-- /drawer__editor -->
     </form>
-  </dialog>
+  </div><!-- /section-drawer -->
 
   <!-- Notificaciones -->
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>

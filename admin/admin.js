@@ -749,16 +749,17 @@ function defaultContentFor(type) {
 // ---- Modal de edición de sección ----
 function openSectionModal(section) {
   state.editingSection = section;
-  const modal = $('#section-modal');
-  const f = modal.querySelector('form');
+  const modal = { _clearBg: false, _bgFile: null };
+  const drawer = document.getElementById('section-drawer');
+  const f = document.getElementById('section-drawer-form');
 
-  $('#section-modal-title').textContent = `Editar: ${sectionLabel(section.section_type)}`;
+  document.getElementById('section-modal-title').textContent = `Editar: ${sectionLabel(section.section_type)}`;
   f.is_enabled.checked = section.is_enabled;
   // Color pickers: usar valor guardado o blanco como fallback (no negro)
   f.background_color.value = section.background_color || '#ffffff';
   f.text_color.value = section.text_color || '#1a1a1a';
   // Resetear y reinicializar font-pickers del modal
-  modal.querySelectorAll('.font-picker').forEach(p => {
+  drawer.querySelectorAll('.font-picker').forEach(p => {
     delete p.dataset.initialized;
   });
   setFontPickerValue(modal, 'heading_font', section.heading_font || '');
@@ -1125,7 +1126,7 @@ function openSectionModal(section) {
   });
 
   // ── Imagen de fondo ──
-  const bgFileInput = modal.querySelector('[name="section_bg_image"]');
+  const bgFileInput = drawer.querySelector('[name="section_bg_image"]');
   const bgCurrent = $('#section-bg-current');
   const bgPreview = $('#section-bg-preview');
 
@@ -1151,7 +1152,8 @@ function openSectionModal(section) {
   bgFileInputClone.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-    modal._bgFile = file; // guardar referencia directa
+    modal._bgFile = file;
+    drawer.hidden; drawer._bgFile = file; // guardar en drawer para el submit
     const reader = new FileReader();
     reader.onload = ev => {
       bgPreview.src = ev.target.result;
@@ -1160,6 +1162,7 @@ function openSectionModal(section) {
     };
     reader.readAsDataURL(file);
     modal._clearBg = false;
+    drawer._clearBg = false;
   });
 
   const clearBgBtn = $('#clear-section-bg');
@@ -1168,21 +1171,23 @@ function openSectionModal(section) {
   clearBgClone.addEventListener('click', () => {
     bgFileInputClone.value = '';
     modal._bgFile = null;
+    drawer._bgFile = null;
     bgPreview.src = '';
     bgPreview.hidden = true;
     bgCurrent.textContent = '(se quitará al guardar)';
     modal._clearBg = true;
+    drawer._clearBg = true;
   });
 
   // Overlay y blur
-  const overlayInput = modal.querySelector('[name="bg_overlay"]');
+  const overlayInput = drawer.querySelector('[name="bg_overlay"]');
   const overlayValue = $('#bg-overlay-value');
-  const minHeightInput = modal.querySelector('[name="min_height"]');
+  const minHeightInput = drawer.querySelector('[name="min_height"]');
 
   minHeightInput.value = section.min_height || '';
 
   // Height picker presets
-  const heightPresets = modal.querySelectorAll('.height-preset');
+  const heightPresets = drawer.querySelectorAll('.height-preset');
   function updateHeightPresets(val) {
     heightPresets.forEach(btn => {
       btn.classList.toggle('is-active', btn.dataset.value === val);
@@ -1204,7 +1209,7 @@ function openSectionModal(section) {
     overlayValue.textContent = Number(overlayInput.value).toFixed(2);
   });
 
-  const blurInput = modal.querySelector('[name="bg_blur"]');
+  const blurInput = drawer.querySelector('[name="bg_blur"]');
   const blurValue = $('#bg-blur-value');
   blurInput.value = section.bg_blur ?? 0;
   blurValue.textContent = blurInput.value;
@@ -1212,12 +1217,11 @@ function openSectionModal(section) {
     blurValue.textContent = blurInput.value;
   });
 
-  modal.showModal();
-
-  // Restaurar estado del preview si estaba abierto
-  if (localStorage.getItem('vylo-preview-open') === '1') {
-    openPreview();
-  }
+  // Abrir drawer
+  drawer.hidden = false;
+  document.body.style.overflow = 'hidden';
+  // Cargar preview
+  loadPreview();
 }
 
 function contentFieldsFor(type) {
@@ -1354,22 +1358,23 @@ function contentFieldsFor(type) {
   })[type] || [];
 }
 
-$('#section-modal .modal__close').addEventListener('click', () => $('#section-modal').close());
-$('#section-modal [data-action="close"]').addEventListener('click', () => $('#section-modal').close());
+document.getElementById('drawer-close-btn').addEventListener('click', () => closeDrawer());
+document.getElementById('cancel-section-btn').addEventListener('click', () => closeDrawer());
 
 $$('#section-modal [data-clear]').forEach(btn => {
   btn.addEventListener('click', () => {
-    const f = $('#section-modal form');
+    
     f[btn.dataset.clear].value = '';
   });
 });
 
-$('#section-modal form').addEventListener('submit', async e => {
+document.getElementById('section-drawer-form').addEventListener('submit', async e => {
   if (e.submitter && e.submitter.dataset.action === 'close') return;
   e.preventDefault();
   const f = e.target;
   const section = state.editingSection;
-  const modal = $('#section-modal');
+  const drawer = document.getElementById('section-drawer');
+  const modal = { _clearBg: drawer._clearBg || false, _bgFile: drawer._bgFile || null };
   const fd = new FormData(f);
 
   console.log('[Modal] Guardando sección:', section.section_type);
@@ -1395,7 +1400,7 @@ $('#section-modal form').addEventListener('submit', async e => {
     }
   }
   // Leer columnas de columns_editor si existe
-  const colsEditor = modal.querySelector('.columns-editor');
+  const colsEditor = drawer.querySelector('.columns-editor');
   if (colsEditor) {
     const cols = JSON.parse(colsEditor.dataset.cols || '[]');
     console.log('[Modal] Columnas guardadas:', JSON.stringify(cols));
@@ -1467,7 +1472,7 @@ $('#section-modal form').addEventListener('submit', async e => {
   Object.assign(section, update);
   renderSectionsList();
   reloadPreviewAfterSave();
-  $('#section-modal').close();
+  closeDrawer();
   toast('Sección actualizada');
 });
 
@@ -1785,16 +1790,12 @@ $('#form-new-link').addEventListener('submit', async e => {
 });
 
 // ============================================================
-// PREVIEW EN TIEMPO REAL
+// DRAWER + PREVIEW
 // ============================================================
-const previewToggleBtn = document.getElementById('preview-toggle-btn');
-const previewPanel     = document.getElementById('modal-preview-panel');
 const previewIframe    = document.getElementById('preview-iframe');
 const previewReloadBtn = document.getElementById('preview-reload-btn');
 const previewFrameWrap = document.getElementById('preview-frame-wrap');
 const deviceBtns       = document.querySelectorAll('.preview__device-btn');
-
-let previewOpen = false;
 
 function getPreviewUrl() {
   const inv = state.currentInvitation;
@@ -1802,35 +1803,29 @@ function getPreviewUrl() {
   return `${window.location.origin}/public/?i=${inv.slug}`;
 }
 
-function openPreview() {
-  previewOpen = true;
-  previewPanel.hidden = false;
-  previewToggleBtn.classList.add('is-active');
-  document.getElementById('section-modal').classList.add('preview-open');
-  if (!previewIframe.src || previewIframe.src === window.location.href) {
-    previewIframe.src = getPreviewUrl();
+function loadPreview() {
+  const url = getPreviewUrl();
+  if (!url) return;
+  // Solo cargar si no está ya cargado para esta invitación
+  if (!previewIframe.src.includes(inv => inv)) {
+    previewIframe.src = url;
   }
-  localStorage.setItem('vylo-preview-open', '1');
-}
-
-function closePreview() {
-  previewOpen = false;
-  previewPanel.hidden = true;
-  previewToggleBtn.classList.remove('is-active');
-  document.getElementById('section-modal').classList.remove('preview-open');
-  localStorage.setItem('vylo-preview-open', '0');
 }
 
 function reloadPreview() {
-  if (!previewOpen) return;
-  previewIframe.src = getPreviewUrl() + '&t=' + Date.now();
+  const url = getPreviewUrl();
+  if (!url) return;
+  previewIframe.src = url + '&_t=' + Date.now();
 }
 
-previewToggleBtn.addEventListener('click', () => {
-  previewOpen ? closePreview() : openPreview();
-});
+function reloadPreviewAfterSave() {
+  setTimeout(() => reloadPreview(), 900);
+}
 
-previewReloadBtn.addEventListener('click', reloadPreview);
+function closeDrawer() {
+  document.getElementById('section-drawer').hidden = true;
+  document.body.style.overflow = '';
+}
 
 // Selector de dispositivo
 deviceBtns.forEach(btn => {
@@ -1840,16 +1835,17 @@ deviceBtns.forEach(btn => {
     const device = btn.dataset.device;
     previewIframe.dataset.device = device;
     previewIframe.setAttribute('data-device', device);
-    // Para desktop, ajustar el frame-wrap
-    previewFrameWrap.style.alignItems = device === 'desktop' ? 'stretch' : 'flex-start';
   });
 });
 
-// Recargar preview automáticamente después de guardar una sección
-function reloadPreviewAfterSave() {
-  if (!previewOpen) return;
-  setTimeout(() => reloadPreview(), 800); // pequeño delay para que Supabase actualice
-}
+previewReloadBtn.addEventListener('click', reloadPreview);
+
+// Cerrar con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('section-drawer').hidden) {
+    closeDrawer();
+  }
+});
 
 // ============================================================
 // INICIO
