@@ -1809,7 +1809,8 @@ let previewReady = false;
 // Listener persistente — no usar .onload que se sobreescribe
 previewIframe.addEventListener('load', () => {
   previewReady = true;
-  setTimeout(() => sendPreviewMessage(), 200);
+  // Esperar que app.js inicialice y renderice antes de enviar
+  setTimeout(() => sendPreviewMessage(), 600);
 });
 
 function loadPreview() {
