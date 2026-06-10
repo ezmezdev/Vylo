@@ -1132,7 +1132,7 @@ window.addEventListener('message', e => {
 });
 
 function renderSections({ invitation, sections, gallery }) {
-  const container = document.getElementById('sections-container');
+  const container      = document.getElementById('sections-container');
   const footerContainer = document.getElementById('footer-container');
   console.log('[Landing] Renderizando', sections.length, 'secciones');
 
@@ -1193,6 +1193,11 @@ function renderSections({ invitation, sections, gallery }) {
   }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
 
   document.querySelectorAll('.section').forEach(s => io.observe(s));
+
+  // Avisar al padre (admin iframe) que la landing está lista para recibir preview
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'vylo-ready' }, '*');
+  }
 
   // Parallax scroll handler
   const parallaxSections = document.querySelectorAll('.has-parallax');
