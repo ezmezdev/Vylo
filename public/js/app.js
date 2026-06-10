@@ -1056,6 +1056,73 @@ const RENDERERS = {
   footer:    renderFooter,
 };
 
+// ============================================================
+// PREVIEW EN VIVO (recibe datos del admin via postMessage)
+// ============================================================
+let _previewData = null; // datos actuales de la invitación
+
+function renderSingleSection(section, invitation, gallery) {
+  const container = document.getElementById('sections-container');
+  const footerContainer = document.getElementById('footer-container');
+
+  // Buscar el nodo existente por section id
+  const existing = document.querySelector(`[data-section-id="${section.id}"]`);
+
+  const tpl = document.getElementById(`tpl-${section.section_type}`);
+  if (!tpl) return;
+
+  const node = tpl.content.firstElementChild.cloneNode(true);
+  node.dataset.sectionId = section.id;
+
+  const isFooter = section.section_type === 'footer';
+  const target = isFooter ? footerContainer : container;
+
+  if (!isFooter) {
+    applySectionStyles(node, section, null);
+    if (section.particle_effect && section.particle_effect !== 'none') {
+      initParticles(node, section.particle_effect, section.particle_intensity || 50);
+    }
+  }
+
+  const renderer = RENDERERS[section.section_type];
+  if (renderer) {
+    if (section.section_type === 'gallery') renderer(node, invitation, section.content || {}, gallery);
+    else if (section.section_type === 'hero') renderer(node, invitation, section.content || {}, section);
+    else renderer(node, invitation, section.content || {});
+  }
+
+  // Hacer visible inmediatamente (sin animación de scroll en preview)
+  node.classList.add('is-visible');
+  node.classList.remove('has-reveal', 'motion-entry');
+
+  if (existing) {
+    existing.replaceWith(node);
+  } else {
+    target.appendChild(node);
+  }
+}
+
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'vylo-preview') return;
+
+  const { section, invitation, gallery } = e.data;
+  if (!section || !invitation) return;
+
+  _previewData = { section, invitation, gallery: gallery || [] };
+
+  // Modo preview: mostrar barra indicadora
+  let bar = document.getElementById('preview-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'preview-bar';
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#000;font-size:11px;font-weight:700;text-align:center;padding:3px;letter-spacing:.05em;text-transform:uppercase;';
+    bar.textContent = '👁 VISTA PREVIA — Los cambios no están guardados';
+    document.body.prepend(bar);
+  }
+
+  renderSingleSection(section, invitation, gallery || []);
+});
+
 function renderSections({ invitation, sections, gallery }) {
   const container = document.getElementById('sections-container');
   const footerContainer = document.getElementById('footer-container');
@@ -1071,6 +1138,7 @@ function renderSections({ invitation, sections, gallery }) {
       }
 
       const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.sectionId = section.id;
 
       // El footer va en su propio contenedor, al final
       const isFooter = section.section_type === 'footer';
