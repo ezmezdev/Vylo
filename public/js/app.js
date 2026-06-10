@@ -1062,11 +1062,8 @@ const RENDERERS = {
 let _previewData = null; // datos actuales de la invitación
 
 function renderSingleSection(section, invitation, gallery) {
-  const container = document.getElementById('sections-container');
+  const container      = document.getElementById('sections-container');
   const footerContainer = document.getElementById('footer-container');
-
-  // Buscar el nodo existente por section id
-  const existing = document.querySelector(`[data-section-id="${section.id}"]`);
 
   const tpl = document.getElementById(`tpl-${section.section_type}`);
   if (!tpl) return;
@@ -1091,15 +1088,26 @@ function renderSingleSection(section, invitation, gallery) {
     else renderer(node, invitation, section.content || {});
   }
 
-  // Hacer visible inmediatamente (sin animación de scroll en preview)
+  // Visible inmediatamente en modo preview
   node.classList.add('is-visible');
   node.classList.remove('has-reveal', 'motion-entry');
+
+  // Buscar el nodo existente — primero por data-section-id, luego por tipo de sección
+  let existing = document.querySelector(`[data-section-id="${section.id}"]`);
+
+  if (!existing) {
+    // Fallback: buscar por data-section (tipo) dentro del container correcto
+    existing = target.querySelector(`[data-section="${section.section_type}"]`);
+  }
 
   if (existing) {
     existing.replaceWith(node);
   } else {
     target.appendChild(node);
   }
+
+  // Scroll suave hacia la sección en el preview
+  setTimeout(() => node.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
 }
 
 window.addEventListener('message', e => {
