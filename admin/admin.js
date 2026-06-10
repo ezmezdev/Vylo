@@ -1153,12 +1153,14 @@ function openSectionModal(section) {
     const file = e.target.files[0];
     if (!file) return;
     modal._bgFile = file;
-    drawer.hidden; drawer._bgFile = file; // guardar en drawer para el submit
+    drawer._bgFile = file;
+    drawer._previewBgUrl = URL.createObjectURL(file);
     const reader = new FileReader();
     reader.onload = ev => {
       bgPreview.src = ev.target.result;
       bgPreview.hidden = false;
       bgCurrent.textContent = '(nueva imagen — se guardará)';
+      schedulePreviewUpdate();
     };
     reader.readAsDataURL(file);
     modal._clearBg = false;
@@ -1790,11 +1792,10 @@ $('#form-new-link').addEventListener('submit', async e => {
 });
 
 // ============================================================
-// DRAWER + PREVIEW
+// DRAWER + PREVIEW EN TIEMPO REAL
 // ============================================================
 const previewIframe    = document.getElementById('preview-iframe');
 const previewReloadBtn = document.getElementById('preview-reload-btn');
-const previewFrameWrap = document.getElementById('preview-frame-wrap');
 const deviceBtns       = document.querySelectorAll('.preview__device-btn');
 
 function getPreviewUrl() {
@@ -1803,42 +1804,140 @@ function getPreviewUrl() {
   return `${window.location.origin}/public/?i=${inv.slug}`;
 }
 
+let previewReady = false;
+
 function loadPreview() {
   const url = getPreviewUrl();
   if (!url) return;
-  // Solo cargar si no está ya cargado para esta invitación
-  if (!previewIframe.src.includes(inv => inv)) {
-    previewIframe.src = url;
-  }
+  previewReady = false;
+  previewIframe.src = url;
+  previewIframe.onload = () => {
+    previewReady = true;
+    // Enviar datos actuales del formulario al cargar
+    sendPreviewMessage();
+  };
 }
 
 function reloadPreview() {
-  const url = getPreviewUrl();
-  if (!url) return;
-  previewIframe.src = url + '&_t=' + Date.now();
+  loadPreview();
 }
 
 function reloadPreviewAfterSave() {
-  setTimeout(() => reloadPreview(), 900);
+  // Después de guardar, recargar el iframe para que use los datos de Supabase
+  setTimeout(() => loadPreview(), 900);
 }
 
 function closeDrawer() {
   document.getElementById('section-drawer').hidden = true;
   document.body.style.overflow = '';
+  previewReady = false;
 }
+
+// Construir objeto section desde el formulario actual
+function buildSectionFromForm() {
+  const section = state.editingSection;
+  if (!section) return null;
+  const f = document.getElementById('section-drawer-form');
+  const fd = new FormData(f);
+  const drawer = document.getElementById('section-drawer');
+
+  // Content
+  const content = { ...(section.content || {}) };
+  const stringFields = ['title','subtitle','eyebrow','quote','button_text','layout',
+    'text_position','text_size','text_weight',
+    'button_bg','button_color','button_bg_hover','button_color_hover',
+    'tagline','vylo_link','box_style'];
+  const checkboxFields = ['show_ics','show_hosts','show_event','show_date','show_logo'];
+
+  for (const [key, value] of fd.entries()) {
+    if (key.startsWith('content_')) {
+      const k = key.replace('content_', '');
+      content[k] = stringFields.includes(k) ? value : (isNaN(value) || value === '' ? value : Number(value));
+    }
+  }
+  checkboxFields.forEach(k => {
+    const el = f.querySelector(`[name="content_${k}"]`);
+    if (el) content[k] = el.checked;
+  });
+
+  // Columnas
+  const colsEditor = drawer.querySelector('.columns-editor');
+  if (colsEditor) content.columns = JSON.parse(colsEditor.dataset.cols || '[]');
+
+  // Construir sección con datos del form
+  const previewSection = {
+    ...section,
+    content,
+    background_color: f.querySelector('[name="background_color"]')?._pickerValue || section.background_color,
+    text_color:       f.querySelector('[name="text_color"]')?._pickerValue || section.text_color,
+    heading_font:     fd.get('heading_font') || section.heading_font || null,
+    body_font:        fd.get('body_font') || section.body_font || null,
+    font_size:        fd.get('font_size') ? Number(fd.get('font_size')) : section.font_size,
+    padding_y:        fd.get('padding_y') ? Number(fd.get('padding_y')) : section.padding_y,
+    min_height:       fd.get('min_height') || section.min_height || null,
+    bg_overlay:       Number(fd.get('bg_overlay')) || 0,
+    bg_blur:          Number(fd.get('bg_blur')) || 0,
+    bottom_transition: fd.get('bottom_transition') || 'none',
+    top_transition:    fd.get('top_transition') || 'none',
+    motion_effect:     fd.get('motion_effect') || 'none',
+    particle_effect:   fd.get('particle_effect') || 'none',
+    particle_intensity: Number(fd.get('particle_intensity')) || 50,
+    // imagen de fondo: si hay nueva imagen pendiente, usar el ObjectURL temporal
+    bg_image_url: drawer._previewBgUrl || drawer._bgFile
+      ? (drawer._previewBgUrl || section.bg_image_url)
+      : section.bg_image_url,
+  };
+
+  return previewSection;
+}
+
+function sendPreviewMessage() {
+  if (!previewReady) return;
+  const previewSection = buildSectionFromForm();
+  if (!previewSection) return;
+
+  try {
+    previewIframe.contentWindow.postMessage({
+      type: 'vylo-preview',
+      section:    previewSection,
+      invitation: state.currentInvitation,
+      gallery:    state.currentGallery || [],
+    }, '*');
+  } catch(e) {
+    console.warn('[Preview] postMessage error:', e);
+  }
+}
+
+// Debounce para no enviar en cada tecla
+let previewDebounceTimer = null;
+function schedulePreviewUpdate() {
+  clearTimeout(previewDebounceTimer);
+  previewDebounceTimer = setTimeout(() => sendPreviewMessage(), 300);
+}
+
+// Escuchar cambios en el formulario del drawer
+document.getElementById('section-drawer-form').addEventListener('input',  schedulePreviewUpdate);
+document.getElementById('section-drawer-form').addEventListener('change', schedulePreviewUpdate);
+
+// Botón actualizar preview (manual)
+previewReloadBtn.textContent = '↺ Actualizar preview';
+previewReloadBtn.addEventListener('click', () => {
+  if (previewReady) {
+    sendPreviewMessage();
+  } else {
+    loadPreview();
+  }
+});
 
 // Selector de dispositivo
 deviceBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     deviceBtns.forEach(b => b.classList.remove('is-active'));
     btn.classList.add('is-active');
-    const device = btn.dataset.device;
-    previewIframe.dataset.device = device;
-    previewIframe.setAttribute('data-device', device);
+    previewIframe.dataset.device = btn.dataset.device;
+    previewIframe.setAttribute('data-device', btn.dataset.device);
   });
 });
-
-previewReloadBtn.addEventListener('click', reloadPreview);
 
 // Cerrar con Escape
 document.addEventListener('keydown', e => {
