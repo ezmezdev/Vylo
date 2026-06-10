@@ -1806,11 +1806,16 @@ function getPreviewUrl() {
 
 let previewReady = false;
 
-// Listener persistente — no usar .onload que se sobreescribe
+// Listener persistente — cuando la landing avisa que está lista
 previewIframe.addEventListener('load', () => {
-  previewReady = true;
-  // Esperar que app.js inicialice y renderice antes de enviar
-  setTimeout(() => sendPreviewMessage(), 600);
+  previewReady = false; // resetear — esperar el vylo-ready
+});
+
+window.addEventListener('message', e => {
+  if (e.data?.type === 'vylo-ready') {
+    previewReady = true;
+    sendPreviewMessage();
+  }
 });
 
 function loadPreview() {
