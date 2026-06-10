@@ -762,9 +762,9 @@ function openSectionModal(section) {
   drawer.querySelectorAll('.font-picker').forEach(p => {
     delete p.dataset.initialized;
   });
-  setFontPickerValue(modal, 'heading_font', section.heading_font || '');
-  setFontPickerValue(modal, 'body_font', section.body_font || '');
-  initFontPickers(modal);
+  setFontPickerValue(drawer, 'heading_font', section.heading_font || '');
+  setFontPickerValue(drawer, 'body_font', section.body_font || '');
+  initFontPickers(drawer);
   f.font_size.value = section.font_size || '';
   f.padding_y.value = section.padding_y ?? 80;
 
