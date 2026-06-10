@@ -1806,16 +1806,17 @@ function getPreviewUrl() {
 
 let previewReady = false;
 
+// Listener persistente — no usar .onload que se sobreescribe
+previewIframe.addEventListener('load', () => {
+  previewReady = true;
+  setTimeout(() => sendPreviewMessage(), 200);
+});
+
 function loadPreview() {
   const url = getPreviewUrl();
   if (!url) return;
   previewReady = false;
   previewIframe.src = url;
-  previewIframe.onload = () => {
-    previewReady = true;
-    // Enviar datos actuales del formulario al cargar
-    sendPreviewMessage();
-  };
 }
 
 function reloadPreview() {
@@ -1919,12 +1920,15 @@ function schedulePreviewUpdate() {
 document.getElementById('section-drawer-form').addEventListener('input',  schedulePreviewUpdate);
 document.getElementById('section-drawer-form').addEventListener('change', schedulePreviewUpdate);
 
-// Botón actualizar preview (manual)
-previewReloadBtn.textContent = '↺ Actualizar preview';
+// Botón actualizar preview — siempre fuerza el envío
 previewReloadBtn.addEventListener('click', () => {
   if (previewReady) {
     sendPreviewMessage();
+    // Feedback visual
+    previewReloadBtn.textContent = '✓ Actualizado';
+    setTimeout(() => { previewReloadBtn.textContent = '↺ Actualizar'; }, 1200);
   } else {
+    // iframe no cargó todavía — recargar
     loadPreview();
   }
 });
