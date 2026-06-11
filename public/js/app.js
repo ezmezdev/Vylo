@@ -1083,85 +1083,77 @@ const RENDERERS = {
 };
 
 // ============================================================
-// PREVIEW EN VIVO (recibe datos del admin via postMessage)
+// PREVIEW EN VIVO — postMessage desde el admin
 // ============================================================
-let _previewData = null; // datos actuales de la invitación
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'vylo-preview') return;
 
-function renderSingleSection(section, sectionIndex, invitation, gallery) {
-  const container       = document.getElementById('sections-container');
-  const footerContainer = document.getElementById('footer-container');
+  const { section, invitation, gallery } = e.data;
+  if (!section || !invitation) return;
 
+  // Barra indicadora
+  let bar = document.getElementById('preview-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'preview-bar';
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#000;font-size:11px;font-weight:700;text-align:center;padding:4px 0;letter-spacing:.05em;text-transform:uppercase;pointer-events:none';
+    bar.textContent = '\u{1F441} VISTA PREVIA';
+    document.body.prepend(bar);
+  }
+
+  // Buscar el nodo existente de esta sección
+  // Estrategia 1: por data-section-id (exacto)
+  let target = document.querySelector(`[data-section-id="${section.id}"]`);
+
+  // Estrategia 2: por posición — section.position es el índice en el container
+  if (!target) {
+    const container = document.getElementById('sections-container');
+    const footerCont = document.getElementById('footer-container');
+    const cont = section.section_type === 'footer' ? footerCont : container;
+    if (cont) {
+      const nodes = Array.from(cont.children);
+      // Buscar el nodo que corresponde al tipo de sección
+      const byType = nodes.filter(n => n.dataset.section === section.section_type);
+      if (byType.length === 1) target = byType[0];
+      else if (section.position !== undefined && nodes[section.position]) target = nodes[section.position];
+    }
+  }
+
+  if (!target) {
+    dbg('[Preview] No se encontró el nodo para:', section.section_type, section.id);
+    return;
+  }
+
+  // Crear nuevo nodo con los datos del preview
   const tpl = document.getElementById(`tpl-${section.section_type}`);
   if (!tpl) return;
 
   const node = tpl.content.firstElementChild.cloneNode(true);
   node.dataset.sectionId = section.id;
+  node.dataset.section   = section.section_type;
 
-  const isFooter = section.section_type === 'footer';
-  const target = isFooter ? footerContainer : container;
-
-  if (!isFooter) {
-    applySectionStyles(node, section, null);
-    if (section.particle_effect && section.particle_effect !== 'none') {
-      initParticles(node, section.particle_effect, section.particle_intensity || 50);
-    }
-  }
+  // Aplicar estilos y renderizar
+  if (section.section_type !== 'footer') applySectionStyles(node, section, null);
 
   const renderer = RENDERERS[section.section_type];
   if (renderer) {
-    if (section.section_type === 'gallery')      renderer(node, invitation, section.content || {}, gallery);
-    else if (section.section_type === 'hero')    renderer(node, invitation, section.content || {}, section);
-    else                                          renderer(node, invitation, section.content || {});
+    if (section.section_type === 'gallery')   renderer(node, invitation, section.content || {}, gallery || []);
+    else if (section.section_type === 'hero') renderer(node, invitation, section.content || {}, section);
+    else                                       renderer(node, invitation, section.content || {});
   }
 
-  // Visible inmediatamente en preview
+  // Siempre visible en preview
   node.classList.add('is-visible');
-  node.classList.remove('has-reveal', 'motion-entry');
+  node.style.opacity = '1';
+  node.style.transform = 'none';
 
-  // Estrategia 1: buscar por data-section-id (exacto)
-  let existing = document.querySelector(`[data-section-id="${section.id}"]`);
+  // Reemplazar
+  target.replaceWith(node);
 
-  // Estrategia 2: buscar por posición en el container
-  if (!existing && sectionIndex >= 0 && !isFooter) {
-    const children = Array.from(container.children);
-    if (children[sectionIndex]) existing = children[sectionIndex];
-  }
-
-  // Estrategia 3: buscar por tipo (primera ocurrencia)
-  if (!existing) {
-    existing = target.querySelector(`[data-section="${section.section_type}"]`);
-  }
-
-  if (existing) {
-    existing.replaceWith(node);
-  } else {
-    target.appendChild(node);
-  }
-
-  // Scroll hacia la sección
-  setTimeout(() => node.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
-}
-
-window.addEventListener('message', e => {
-  if (!e.data || e.data.type !== 'vylo-preview') return;
-
-  const { section, sectionIndex, invitation, gallery } = e.data;
-  if (!section || !invitation) return;
-
-  _previewData = { section, invitation, gallery: gallery || [] };
-
-  // Barra indicadora de modo preview
-  let bar = document.getElementById('preview-bar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'preview-bar';
-    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#000;font-size:11px;font-weight:700;text-align:center;padding:3px;letter-spacing:.05em;text-transform:uppercase;';
-    bar.textContent = '👁 VISTA PREVIA — Los cambios no están guardados';
-    document.body.prepend(bar);
-  }
-
-  renderSingleSection(section, sectionIndex, invitation, gallery || []);
+  // Scroll suave hacia la sección
+  setTimeout(() => node.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 });
+
 
 function renderSections({ invitation, sections, gallery }) {
   const container      = document.getElementById('sections-container');
@@ -1179,6 +1171,7 @@ function renderSections({ invitation, sections, gallery }) {
 
       const node = tpl.content.firstElementChild.cloneNode(true);
       node.dataset.sectionId = section.id;
+      node.dataset.section   = section.section_type; // asegurar siempre presente
 
       // El footer va en su propio contenedor, al final
       const isFooter = section.section_type === 'footer';
