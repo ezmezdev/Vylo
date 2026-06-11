@@ -1840,120 +1840,118 @@ const previewIframe    = document.getElementById('preview-iframe');
 const previewReloadBtn = document.getElementById('preview-reload-btn');
 const deviceBtns       = document.querySelectorAll('.preview__device-btn');
 
+let previewReady = false;
+let pendingPreviewSend = false;
+
 function getPreviewUrl() {
   const inv = state.currentInvitation;
   if (!inv) return '';
   return `${window.location.origin}/public/?i=${inv.slug}`;
 }
 
-let previewReady = false;
-
-// Listener persistente — cuando la landing avisa que está lista
-previewIframe.addEventListener('load', () => {
-  previewReady = false; // resetear — esperar el vylo-ready
-});
-
+// Cuando la landing termina de renderizar avisa con 'vylo-ready'
 window.addEventListener('message', e => {
   if (e.data?.type === 'vylo-ready') {
     previewReady = true;
-    sendPreviewMessage();
+    dbg('[Preview] Landing lista, enviando datos...');
+    if (pendingPreviewSend) {
+      pendingPreviewSend = false;
+      sendPreviewMessage();
+    }
   }
+});
+
+previewIframe.addEventListener('load', () => {
+  previewReady = false;
+  pendingPreviewSend = true; // marcar que hay que enviar cuando esté lista
+  dbg('[Preview] iframe cargó, esperando vylo-ready...');
 });
 
 function loadPreview() {
   const url = getPreviewUrl();
   if (!url) return;
   previewReady = false;
+  pendingPreviewSend = true;
   previewIframe.src = url;
 }
 
-function reloadPreview() {
-  loadPreview();
-}
-
-function reloadPreviewAfterSave() {
-  // Después de guardar, recargar el iframe para que use los datos de Supabase
-  setTimeout(() => loadPreview(), 900);
-}
+function reloadPreview() { loadPreview(); }
+function reloadPreviewAfterSave() { setTimeout(() => loadPreview(), 1000); }
 
 function closeDrawer() {
   document.getElementById('section-drawer').hidden = true;
   document.body.style.overflow = '';
   previewReady = false;
+  pendingPreviewSend = false;
 }
 
-// Construir objeto section desde el formulario actual
+// ── Construir objeto sección desde el formulario ──
 function buildSectionFromForm() {
   const section = state.editingSection;
   if (!section) return null;
-  const f = document.getElementById('section-drawer-form');
+  const f  = document.getElementById('section-drawer-form');
   const fd = new FormData(f);
   const drawer = document.getElementById('section-drawer');
 
-  // Content
   const content = { ...(section.content || {}) };
   const stringFields = ['title','subtitle','eyebrow','quote','button_text','layout',
     'text_position','text_size','text_weight',
     'button_bg','button_color','button_bg_hover','button_color_hover',
     'tagline','vylo_link','box_style'];
+  const colorFields    = ['button_bg','button_color','button_bg_hover','button_color_hover'];
   const checkboxFields = ['show_ics','show_hosts','show_event','show_date','show_logo'];
 
   for (const [key, value] of fd.entries()) {
-    if (key.startsWith('content_')) {
-      const k = key.replace('content_', '');
-      content[k] = stringFields.includes(k) ? value : (isNaN(value) || value === '' ? value : Number(value));
-    }
+    if (!key.startsWith('content_')) continue;
+    const k = key.replace('content_', '');
+    if (colorFields.includes(k))   content[k] = (value && value !== '#000000') ? value : null;
+    else if (stringFields.includes(k)) content[k] = value;
+    else content[k] = isNaN(value) || value === '' ? value : Number(value);
   }
   checkboxFields.forEach(k => {
     const el = f.querySelector(`[name="content_${k}"]`);
     if (el) content[k] = el.checked;
   });
-
-  // Columnas
   const colsEditor = drawer.querySelector('.columns-editor');
   if (colsEditor) content.columns = JSON.parse(colsEditor.dataset.cols || '[]');
 
-  // Construir sección con datos del form
-  const previewSection = {
+  return {
     ...section,
     content,
-    background_color: f.querySelector('[name="background_color"]')?._pickerValue || section.background_color,
-    text_color:       f.querySelector('[name="text_color"]')?._pickerValue || section.text_color,
-    heading_font:     fd.get('heading_font') || section.heading_font || null,
-    body_font:        fd.get('body_font') || section.body_font || null,
-    font_size:        fd.get('font_size') ? Number(fd.get('font_size')) : section.font_size,
-    padding_y:        fd.get('padding_y') ? Number(fd.get('padding_y')) : section.padding_y,
-    min_height:       fd.get('min_height') || section.min_height || null,
-    bg_overlay:       Number(fd.get('bg_overlay')) || 0,
-    bg_blur:          Number(fd.get('bg_blur')) || 0,
-    bottom_transition: fd.get('bottom_transition') || 'none',
-    top_transition:    fd.get('top_transition') || 'none',
-    motion_effect:     fd.get('motion_effect') || 'none',
-    particle_effect:   fd.get('particle_effect') || 'none',
+    position:          section.position,
+    heading_font:      fd.get('heading_font') || section.heading_font || null,
+    body_font:         fd.get('body_font')    || section.body_font    || null,
+    font_size:         fd.get('font_size')    ? Number(fd.get('font_size')) : section.font_size,
+    padding_y:         fd.get('padding_y')    ? Number(fd.get('padding_y')) : section.padding_y,
+    min_height:        fd.get('min_height')   || section.min_height   || null,
+    bg_overlay:        Number(fd.get('bg_overlay')) || 0,
+    bg_blur:           Number(fd.get('bg_blur'))    || 0,
+    bottom_transition: fd.get('bottom_transition')  || 'none',
+    top_transition:    fd.get('top_transition')     || 'none',
+    motion_effect:     fd.get('motion_effect')      || 'none',
+    particle_effect:   fd.get('particle_effect')    || 'none',
     particle_intensity: Number(fd.get('particle_intensity')) || 50,
-    // imagen de fondo: si hay nueva imagen pendiente, usar el ObjectURL temporal
-    bg_image_url: drawer._previewBgUrl || drawer._bgFile
-      ? (drawer._previewBgUrl || section.bg_image_url)
-      : section.bg_image_url,
+    background_color:  fd.get('background_color')   || section.background_color || null,
+    text_color:        fd.get('text_color')          || section.text_color       || null,
+    bg_image_url:      drawer._previewBgUrl || section.bg_image_url,
   };
-
-  return previewSection;
 }
 
 function sendPreviewMessage() {
-  if (!previewReady) return;
+  if (!previewReady) {
+    pendingPreviewSend = true;
+    dbg('[Preview] No listo, marcando pendiente');
+    return;
+  }
   const previewSection = buildSectionFromForm();
   if (!previewSection) return;
 
-  // Incluir la posición de la sección para que el iframe pueda encontrarla exactamente
-  const allSections = state.currentSections || [];
-  const sectionIndex = allSections.findIndex(s => s.id === previewSection.id);
+  dbg('[Preview] Enviando sección:', previewSection.section_type, 'pos:', previewSection.position);
 
   try {
     previewIframe.contentWindow.postMessage({
-      type: 'vylo-preview',
+      type:       'vylo-preview',
       section:    previewSection,
-      sectionIndex,
       invitation: state.currentInvitation,
       gallery:    state.currentGallery || [],
     }, '*');
@@ -1962,26 +1960,24 @@ function sendPreviewMessage() {
   }
 }
 
-// Debounce para no enviar en cada tecla
-let previewDebounceTimer = null;
+// Debounce 400ms
+let _previewTimer = null;
 function schedulePreviewUpdate() {
-  clearTimeout(previewDebounceTimer);
-  previewDebounceTimer = setTimeout(() => sendPreviewMessage(), 300);
+  clearTimeout(_previewTimer);
+  _previewTimer = setTimeout(sendPreviewMessage, 400);
 }
 
-// Escuchar cambios en el formulario del drawer
+// Escuchar cambios en el formulario
 document.getElementById('section-drawer-form').addEventListener('input',  schedulePreviewUpdate);
 document.getElementById('section-drawer-form').addEventListener('change', schedulePreviewUpdate);
 
-// Botón actualizar preview — siempre fuerza el envío
+// Botón actualizar
 previewReloadBtn.addEventListener('click', () => {
   if (previewReady) {
     sendPreviewMessage();
-    // Feedback visual
-    previewReloadBtn.textContent = '✓ Actualizado';
-    setTimeout(() => { previewReloadBtn.textContent = '↺ Actualizar'; }, 1200);
+    previewReloadBtn.textContent = '✓';
+    setTimeout(() => { previewReloadBtn.textContent = '↺ Actualizar'; }, 1000);
   } else {
-    // iframe no cargó todavía — recargar
     loadPreview();
   }
 });
@@ -1998,10 +1994,9 @@ deviceBtns.forEach(btn => {
 
 // Cerrar con Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !document.getElementById('section-drawer').hidden) {
-    closeDrawer();
-  }
+  if (e.key === 'Escape' && !document.getElementById('section-drawer').hidden) closeDrawer();
 });
+
 
 // ============================================================
 // INICIO
