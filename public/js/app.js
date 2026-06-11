@@ -1,3 +1,6 @@
+const _debug = location.hostname === 'localhost' || location.search.includes('debug=1');
+const dbg = (...a) => _debug && dbg(...a);
+
 // ============================================================
 // INVITACIONES DINÁMICAS · APP PRINCIPAL
 // ============================================================
@@ -257,7 +260,7 @@ function loadFonts(headingFont, bodyFont) {
 // ---- Carga de datos ----
 
 async function fetchInvitation(slug) {
-  console.log('[Landing] Buscando invitación:', slug);
+  dbg('[Landing] Buscando invitación:', slug);
 
   const { data: invitation, error } = await supabaseClient
     .from('invitations')
@@ -266,7 +269,7 @@ async function fetchInvitation(slug) {
     .eq('is_published', true)
     .single();
 
-  console.log('[Landing] Invitación:', { invitation, error });
+  dbg('[Landing] Invitación:', { invitation, error });
   if (error || !invitation) return null;
 
   const [sectionsRes, galleryRes] = await Promise.all([
@@ -281,8 +284,8 @@ async function fetchInvitation(slug) {
       .order('position', { ascending: true })
   ]);
 
-  console.log('[Landing] Secciones:', sectionsRes);
-  console.log('[Landing] Galería:', galleryRes);
+  dbg('[Landing] Secciones:', sectionsRes);
+  dbg('[Landing] Galería:', galleryRes);
 
   return {
     invitation,
@@ -632,7 +635,14 @@ function renderCountdown(el, inv, content) {
     el.querySelector('[data-unit="seconds"]').textContent = String(seconds).padStart(2, '0');
     return true;
   }
-  if (tick()) setInterval(tick, 1000);
+  if (tick()) {
+    const intervalId = setInterval(tick, 1000);
+    // Cleanup cuando la sección es reemplazada (preview) o removida del DOM
+    const observer = new MutationObserver(() => {
+      if (!el.isConnected) { clearInterval(intervalId); observer.disconnect(); }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 }
 
 function applyBtnColors(btn, content) {
@@ -710,6 +720,56 @@ function renderCalendar(el, inv, content) {
   icalLink.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
 
+function createGalleryFigure(img, i, images, eager) {
+  const figure = document.createElement('figure');
+  figure.className = 'gallery__item';
+  figure.tabIndex = 0;
+  figure.setAttribute('role', 'button');
+  figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text || `foto ${i+1}`}`);
+  figure.dataset.index = i;
+
+  const imgEl = document.createElement('img');
+  imgEl.alt = img.alt_text || '';
+  imgEl.decoding = 'async';
+  imgEl.style.transition = 'opacity .4s ease';
+
+  if (eager) {
+    imgEl.src = storageUrl(img.image_url);
+    imgEl.loading = 'eager';
+  } else {
+    // Lazy: cargar solo cuando entra al viewport
+    imgEl.src = '';
+    imgEl.dataset.src = storageUrl(img.image_url);
+    imgEl.loading = 'lazy';
+    imgEl.style.opacity = '0';
+    imgEl.style.backgroundColor = 'var(--color-border)';
+
+    const io = new IntersectionObserver(entries => {
+      if (!entries[0].isIntersecting) return;
+      imgEl.src = imgEl.dataset.src;
+      imgEl.onload = () => { imgEl.style.opacity = '1'; };
+      io.disconnect();
+    }, { rootMargin: '200px 0px' });
+    io.observe(imgEl);
+  }
+
+  if (img.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'gallery__caption';
+    cap.textContent = img.caption;
+    figure.appendChild(imgEl);
+    figure.appendChild(cap);
+  } else {
+    figure.appendChild(imgEl);
+  }
+
+  figure.addEventListener('click', () => openLightbox(images, i));
+  figure.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }
+  });
+  return figure;
+}
+
 function renderGallery(el, inv, content, images) {
   el.querySelector('[data-field="title"]').textContent = content.title || 'Galería';
   el.querySelector('[data-field="subtitle"]').textContent = content.subtitle || '';
@@ -723,50 +783,16 @@ function renderGallery(el, inv, content, images) {
     return;
   }
 
-  if (layout === 'featured') {
-    // Primera imagen grande, resto miniaturas
-    images.forEach((img, i) => {
-      const figure = document.createElement('figure');
-      figure.className = i === 0 ? 'gallery__item gallery__item--featured' : 'gallery__item gallery__item--thumb';
-      figure.tabIndex = 0;
-      figure.setAttribute('role', 'button');
-      figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text}`);
-      figure.innerHTML = `<img src="${storageUrl(img.image_url)}" alt="${img.alt_text}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" />`;
-      figure.dataset.index = i;
-      figure.addEventListener('click', () => openLightbox(images, i));
-      figure.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }});
-      grid.appendChild(figure);
-    });
-  } else if (layout === 'horizontal') {
-    images.forEach((img, i) => {
-      const figure = document.createElement('figure');
-      figure.className = 'gallery__item';
-      figure.tabIndex = 0;
-      figure.setAttribute('role', 'button');
-      figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text}`);
-      figure.innerHTML = `<img src="${storageUrl(img.image_url)}" alt="${img.alt_text}" loading="lazy" decoding="async" />`;
-      figure.dataset.index = i;
-      figure.addEventListener('click', () => openLightbox(images, i));
-      figure.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }});
-      grid.appendChild(figure);
-    });
-  } else {
-    images.forEach((img, i) => {
-      const figure = document.createElement('figure');
-      figure.className = 'gallery__item';
-      figure.tabIndex = 0;
-      figure.setAttribute('role', 'button');
-      figure.setAttribute('aria-label', `Ver imagen: ${img.alt_text}`);
-      figure.innerHTML = `
-        <img src="${storageUrl(img.image_url)}" alt="${img.alt_text}" loading="lazy" decoding="async" />
-        ${img.caption ? `<figcaption class="gallery__caption">${img.caption}</figcaption>` : ''}
-      `;
-      figure.dataset.index = i;
-      figure.addEventListener('click', () => openLightbox(images, i));
-      figure.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(images, i); }});
-      grid.appendChild(figure);
-    });
-  }
+  images.forEach((img, i) => {
+    const eager = i < 3; // Las primeras 3 cargan de inmediato
+    const figure = createGalleryFigure(img, i, images, eager);
+    if (layout === 'featured') {
+      figure.className = i === 0
+        ? 'gallery__item gallery__item--featured'
+        : 'gallery__item gallery__item--thumb';
+    }
+    grid.appendChild(figure);
+  });
 }
 
 // ---- Lightbox ----
@@ -1061,8 +1087,8 @@ const RENDERERS = {
 // ============================================================
 let _previewData = null; // datos actuales de la invitación
 
-function renderSingleSection(section, invitation, gallery) {
-  const container      = document.getElementById('sections-container');
+function renderSingleSection(section, sectionIndex, invitation, gallery) {
+  const container       = document.getElementById('sections-container');
   const footerContainer = document.getElementById('footer-container');
 
   const tpl = document.getElementById(`tpl-${section.section_type}`);
@@ -1083,20 +1109,26 @@ function renderSingleSection(section, invitation, gallery) {
 
   const renderer = RENDERERS[section.section_type];
   if (renderer) {
-    if (section.section_type === 'gallery') renderer(node, invitation, section.content || {}, gallery);
-    else if (section.section_type === 'hero') renderer(node, invitation, section.content || {}, section);
-    else renderer(node, invitation, section.content || {});
+    if (section.section_type === 'gallery')      renderer(node, invitation, section.content || {}, gallery);
+    else if (section.section_type === 'hero')    renderer(node, invitation, section.content || {}, section);
+    else                                          renderer(node, invitation, section.content || {});
   }
 
-  // Visible inmediatamente en modo preview
+  // Visible inmediatamente en preview
   node.classList.add('is-visible');
   node.classList.remove('has-reveal', 'motion-entry');
 
-  // Buscar el nodo existente — primero por data-section-id, luego por tipo de sección
+  // Estrategia 1: buscar por data-section-id (exacto)
   let existing = document.querySelector(`[data-section-id="${section.id}"]`);
 
+  // Estrategia 2: buscar por posición en el container
+  if (!existing && sectionIndex >= 0 && !isFooter) {
+    const children = Array.from(container.children);
+    if (children[sectionIndex]) existing = children[sectionIndex];
+  }
+
+  // Estrategia 3: buscar por tipo (primera ocurrencia)
   if (!existing) {
-    // Fallback: buscar por data-section (tipo) dentro del container correcto
     existing = target.querySelector(`[data-section="${section.section_type}"]`);
   }
 
@@ -1106,19 +1138,19 @@ function renderSingleSection(section, invitation, gallery) {
     target.appendChild(node);
   }
 
-  // Scroll suave hacia la sección en el preview
-  setTimeout(() => node.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+  // Scroll hacia la sección
+  setTimeout(() => node.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
 }
 
 window.addEventListener('message', e => {
   if (!e.data || e.data.type !== 'vylo-preview') return;
 
-  const { section, invitation, gallery } = e.data;
+  const { section, sectionIndex, invitation, gallery } = e.data;
   if (!section || !invitation) return;
 
   _previewData = { section, invitation, gallery: gallery || [] };
 
-  // Modo preview: mostrar barra indicadora
+  // Barra indicadora de modo preview
   let bar = document.getElementById('preview-bar');
   if (!bar) {
     bar = document.createElement('div');
@@ -1128,17 +1160,17 @@ window.addEventListener('message', e => {
     document.body.prepend(bar);
   }
 
-  renderSingleSection(section, invitation, gallery || []);
+  renderSingleSection(section, sectionIndex, invitation, gallery || []);
 });
 
 function renderSections({ invitation, sections, gallery }) {
   const container      = document.getElementById('sections-container');
   const footerContainer = document.getElementById('footer-container');
-  console.log('[Landing] Renderizando', sections.length, 'secciones');
+  dbg('[Landing] Renderizando', sections.length, 'secciones');
 
   sections.forEach((section, idx) => {
     try {
-      console.log('[Landing] Renderizando sección:', section.section_type);
+      dbg('[Landing] Renderizando sección:', section.section_type);
       const tpl = document.getElementById(`tpl-${section.section_type}`);
       if (!tpl) {
         console.warn('[Landing] Template no encontrado para:', section.section_type);
@@ -1171,7 +1203,7 @@ function renderSections({ invitation, sections, gallery }) {
         }
       }
       target.appendChild(node);
-      console.log('[Landing] Sección OK:', section.section_type);
+      dbg('[Landing] Sección OK:', section.section_type);
     } catch(e) {
       console.error('[Landing] Error en sección', section.section_type, ':', e);
     }
@@ -1253,25 +1285,25 @@ function showMain() {
 }
 
 async function init() {
-  console.log('[Landing] Iniciando...');
+  dbg('[Landing] Iniciando...');
   try {
     setupLightbox();
     const slug = getSlug();
     const data = await fetchInvitation(slug);
 
     if (!data) {
-      console.log('[Landing] No se encontró la invitación o no está publicada');
+      dbg('[Landing] No se encontró la invitación o no está publicada');
       showError();
       return;
     }
 
-    console.log('[Landing] Aplicando tema...');
+    dbg('[Landing] Aplicando tema...');
     applyTheme(data.invitation);
 
-    console.log('[Landing] Renderizando secciones:', data.sections.length);
+    dbg('[Landing] Renderizando secciones:', data.sections.length);
     renderSections(data);
 
-    console.log('[Landing] ¡Listo!');
+    dbg('[Landing] ¡Listo!');
     showMain();
 
   } catch(err) {
