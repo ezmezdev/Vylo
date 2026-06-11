@@ -958,19 +958,26 @@ function renderInfo(el, inv, content) {
   items.forEach(item => {
     const pos = item.image_position || 'top';
     const imgHtml = buildColImage(item);
-    const textHtml = `
-      ${item.icon  ? `<div class="info__icon" aria-hidden="true">${item.icon}</div>` : ''}
-      ${item.label ? `<p class="info__col-label">${item.label}</p>` : ''}
-      ${item.title ? `<p class="info__col-title">${item.title}</p>` : ''}
-      ${item.text  ? `<p class="info__col-text">${item.text}</p>` : ''}
-    `;
+
     const div = document.createElement('div');
     div.className = `info__col ${item.image_url ? `info__col--img-${pos}` : ''}`;
-    if (pos === 'left' || pos === 'right') {
-      div.innerHTML = pos === 'left' ? imgHtml + textHtml : textHtml + imgHtml;
-    } else {
-      div.innerHTML = pos === 'top' ? imgHtml + textHtml : textHtml + imgHtml;
-    }
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'col__text-content';
+
+    if (item.icon)  { const p = document.createElement('div'); p.className = 'info__icon'; p.setAttribute('aria-hidden','true'); p.textContent = item.icon; textDiv.appendChild(p); }
+    if (item.label) { const p = document.createElement('p'); p.className = 'info__col-label'; p.textContent = item.label; if (item.label_size) p.style.fontSize = item.label_size; textDiv.appendChild(p); }
+    if (item.title) { const p = document.createElement('p'); p.className = 'info__col-title'; p.textContent = item.title; if (item.title_size) p.style.fontSize = item.title_size; textDiv.appendChild(p); }
+    if (item.text)  { const p = document.createElement('p'); p.className = 'info__col-text';  p.textContent = item.text;  if (item.text_size)  p.style.fontSize = item.text_size;  textDiv.appendChild(p); }
+
+    const imgEl = imgHtml ? (() => { const d = document.createElement('div'); d.innerHTML = imgHtml; return d.firstElementChild; })() : null;
+
+    if (pos === 'top')    { if (imgEl) div.appendChild(imgEl); div.appendChild(textDiv); }
+    else if (pos === 'bottom') { div.appendChild(textDiv); if (imgEl) div.appendChild(imgEl); }
+    else if (pos === 'left')   { if (imgEl) div.appendChild(imgEl); div.appendChild(textDiv); }
+    else if (pos === 'right')  { div.appendChild(textDiv); if (imgEl) div.appendChild(imgEl); }
+    else { div.appendChild(textDiv); }
+
     cols.appendChild(div);
   });
   applyContentSizes(el, content);
