@@ -847,8 +847,17 @@ function openSectionModal(section) {
         <span>${field.label}</span>
       `;
     } else if (field.type === 'textarea') {
+      const sizeKey   = `${field.key}_size`;
+      const sizeVal   = section.content?.[sizeKey] || '';
       label.innerHTML = `
-        <span>${field.label}</span>
+        <div class="field-label-row">
+          <span>${field.label}</span>
+          <div class="field-size-ctrl">
+            <input type="text" name="content_${sizeKey}" class="field-size-input"
+                   value="${escapeHtml(sizeVal)}" placeholder="ej: 1.2rem" title="Tamaño del texto" />
+            <select name="content_${sizeKey}_unit" class="field-size-unit" style="display:none"></select>
+          </div>
+        </div>
         <textarea name="content_${field.key}" rows="2">${escapeHtml(section.content?.[field.key] || '')}</textarea>
         ${field.help ? `<small>${field.help}</small>` : ''}
       `;
@@ -1154,6 +1163,24 @@ function openSectionModal(section) {
         toggleSpan.textContent = check.checked ? 'Personalizado' : 'Usar tema';
         if (!check.checked) colorInp.value = '#000000';
       });
+    } else if (field.type !== 'number' && field.type !== 'color' && field.type !== 'select' && !field.type?.startsWith('col')) {
+      // Campo de texto con control de tamaño
+      const sizeKey = `${field.key}_size`;
+      const sizeVal = section.content?.[sizeKey] || '';
+      label.innerHTML = `
+        <div class="field-label-row">
+          <span>${field.label}</span>
+          <div class="field-size-ctrl">
+            <input type="text" name="content_${sizeKey}" class="field-size-input"
+                   value="${escapeHtml(sizeVal)}" placeholder="ej: 2rem" title="Tamaño del texto (px, rem, vw...)" />
+          </div>
+        </div>
+        <input type="${field.type || 'text'}" name="content_${field.key}"
+               value="${escapeHtml(section.content?.[field.key] ?? '')}"
+               ${field.min != null ? `min="${field.min}"` : ''}
+               ${field.max != null ? `max="${field.max}"` : ''} />
+        ${field.help ? `<small>${field.help}</small>` : ''}
+      `;
     } else {
       label.innerHTML = `
         <span>${field.label}</span>
@@ -1428,7 +1455,11 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
   const stringFields = ['title','subtitle','eyebrow','quote','button_text','layout',
     'text_position','text_size','text_weight',
     'button_bg','button_color','button_bg_hover','button_color_hover',
-    'tagline','vylo_link','box_style'];
+    'tagline','vylo_link','box_style',
+    // tamaños individuales por campo de texto
+    'title_size','subtitle_size','eyebrow_size','quote_size',
+    'button_text_size','tagline_size','address_size',
+  ];
   const colorFields = ['button_bg','button_color','button_bg_hover','button_color_hover'];
 
   for (const [key, value] of fd.entries()) {
@@ -1897,7 +1928,11 @@ function buildSectionFromForm() {
   const stringFields = ['title','subtitle','eyebrow','quote','button_text','layout',
     'text_position','text_size','text_weight',
     'button_bg','button_color','button_bg_hover','button_color_hover',
-    'tagline','vylo_link','box_style'];
+    'tagline','vylo_link','box_style',
+    // tamaños individuales por campo de texto
+    'title_size','subtitle_size','eyebrow_size','quote_size',
+    'button_text_size','tagline_size','address_size',
+  ];
   const colorFields    = ['button_bg','button_color','button_bg_hover','button_color_hover'];
   const checkboxFields = ['show_ics','show_hosts','show_event','show_date','show_logo'];
 
