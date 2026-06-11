@@ -1,5 +1,5 @@
 const _debug = location.hostname === 'localhost' || location.search.includes('debug=1');
-const dbg = (...a) => _debug && dbg(...a);
+const dbg = (...a) => _debug && console.log(...a);
 
 // ============================================================
 // ADMIN PANEL · LÓGICA
