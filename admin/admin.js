@@ -945,7 +945,22 @@ function openSectionModal(section) {
               if (cf.type === 'checkbox') {
                 content.innerHTML = `<label class="checkbox"><input type="checkbox" data-col="${i}" data-cfield="${cf.key}" ${col[cf.key] ? 'checked' : ''}/><span>${cf.label}</span></label>`;
               } else {
-                content.innerHTML = `<label><span>${cf.label}</span><input type="text" data-col="${i}" data-cfield="${cf.key}" value="${escapeHtml(col[cf.key] || '')}" placeholder="${cf.placeholder || ''}"/></label>`;
+                const sizeKey = `${cf.key}_size`;
+                const sizeVal = col[sizeKey] || '';
+                content.innerHTML = `
+                  <label>
+                    <div class="field-label-row">
+                      <span>${cf.label}</span>
+                      <input type="text" class="field-size-input col-size-input"
+                             data-col="${i}" data-cfield="${sizeKey}"
+                             value="${escapeHtml(sizeVal)}"
+                             placeholder="ej: 1rem"
+                             title="Tamaño del texto (px, rem, vw...)" />
+                    </div>
+                    <input type="text" data-col="${i}" data-cfield="${cf.key}"
+                           value="${escapeHtml(col[cf.key] || '')}"
+                           placeholder="${cf.placeholder || ''}"/>
+                  </label>`;
               }
             }
 
@@ -1068,28 +1083,21 @@ function openSectionModal(section) {
           };
         });
 
-        // Cambios en inputs de texto/checkbox/select
+        // Cambios en inputs de texto/checkbox/select de columnas
         editorWrap.querySelectorAll('[data-col]').forEach(inp => {
           if (inp.type === 'file') return;
 
           const saveValue = () => {
             const c = JSON.parse(editorWrap.dataset.cols || '[]');
-            const idx = Number(inp.dataset.col);
+            const idx  = Number(inp.dataset.col);
             const fkey = inp.dataset.cfield;
             if (fkey === undefined || fkey === null || fkey === '') return;
             c[idx][fkey] = inp.type === 'checkbox' ? inp.checked : inp.value;
             editorWrap.dataset.cols = JSON.stringify(c);
           };
 
-          if (inp.type === 'checkbox') {
-            inp.addEventListener('change', saveValue);
-          } else if (inp.tagName === 'SELECT') {
-            inp.addEventListener('change', saveValue);
-          } else {
-            // Texto: guardar en tiempo real al escribir
-            inp.addEventListener('input', saveValue);
-            inp.addEventListener('change', saveValue);
-          }
+          if (inp.type === 'checkbox') inp.addEventListener('change', saveValue);
+          else { inp.addEventListener('input', saveValue); inp.addEventListener('change', saveValue); }
         });
 
         // Subir imagen de columna
