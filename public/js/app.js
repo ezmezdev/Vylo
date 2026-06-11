@@ -486,6 +486,25 @@ function applyMotionEffect(el, effect) {
   }
 }
 
+// Aplica tamaño de texto si está configurado en content
+function applyFieldSize(el, selector, sizeValue) {
+  if (!sizeValue) return;
+  const target = el.querySelector(selector);
+  if (target) target.style.fontSize = sizeValue;
+}
+
+function applyContentSizes(el, content) {
+  applyFieldSize(el, '[data-field="title"]',       content.title_size);
+  applyFieldSize(el, '[data-field="subtitle"]',    content.subtitle_size);
+  applyFieldSize(el, '[data-field="eyebrow"]',     content.eyebrow_size);
+  applyFieldSize(el, '[data-field="quote"]',       content.quote_size);
+  applyFieldSize(el, '[data-field="button_text"]', content.button_text_size);
+  applyFieldSize(el, '[data-field="tagline"]',     content.tagline_size);
+  applyFieldSize(el, '[data-field="address"]',     content.address_size);
+  applyFieldSize(el, '[data-field="host_names"]',  content.host_names_size);
+  applyFieldSize(el, '[data-field="event_date"]',  content.event_date_size);
+}
+
 function renderHero(el, inv, content, section) {
   const eyebrowEl = el.querySelector('[data-field="event_type"]');
   if (content.eyebrow) {
@@ -594,6 +613,8 @@ function renderHero(el, inv, content, section) {
     if (bgWrap) bgWrap.style.display = 'none';
     if (overlay) overlay.style.background = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)';
   }
+
+  applyContentSizes(el, content);
 }
 
 function renderCountdown(el, inv, content) {
@@ -673,6 +694,7 @@ function renderRsvp(el, inv, content) {
   link.href = inv.rsvp_form_url || '#';
   if (!inv.rsvp_form_url) link.setAttribute('aria-disabled', 'true');
   applyBtnColors(link, content);
+  applyContentSizes(el, content);
 }
 
 function renderCalendar(el, inv, content) {
@@ -869,6 +891,7 @@ function renderLocation(el, inv, content) {
   } else {
     dirLink.hidden = true;
   }
+  applyContentSizes(el, content);
 }
 
 function buildColImage(item) {
@@ -950,6 +973,7 @@ function renderInfo(el, inv, content) {
     }
     cols.appendChild(div);
   });
+  applyContentSizes(el, content);
 }
 
 function renderGift(el, inv, content) {
