@@ -1,8 +1,11 @@
+const _debug = location.hostname === 'localhost' || location.search.includes('debug=1');
+const dbg = (...a) => _debug && dbg(...a);
+
 // ============================================================
 // ADMIN PANEL · LÓGICA
 // ============================================================
 
-console.log('[Admin] Script cargando...');
+dbg('[Admin] Script cargando...');
 
 if (!window.APP_CONFIG) {
   console.error('[Admin] ERROR: config.js no cargó. APP_CONFIG no definido.');
@@ -12,9 +15,9 @@ if (!window.supabase) {
 }
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET } = window.APP_CONFIG;
-console.log('[Admin] Conectando a Supabase:', SUPABASE_URL);
+dbg('[Admin] Conectando a Supabase:', SUPABASE_URL);
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('[Admin] Cliente Supabase creado OK');
+dbg('[Admin] Cliente Supabase creado OK');
 
 // ============================================================
 // FONT PICKER — selector de tipografías con preview visual
@@ -307,7 +310,7 @@ function applyThemeMode(mode) {
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
-console.log('[Admin] DOM listo, iniciando...');
+dbg('[Admin] DOM listo, iniciando...');
 
 // Inicializar font-pickers
 initFontPickers();
@@ -316,13 +319,13 @@ initFontPickers();
 initDarkMode();
 
 function showLogin() {
-  console.log('[Admin] Mostrando login');
+  dbg('[Admin] Mostrando login');
   document.getElementById('auth-view').removeAttribute('hidden');
   document.getElementById('admin-view').setAttribute('hidden', '');
 }
 
 function showAdmin() {
-  console.log('[Admin] Mostrando panel...');
+  dbg('[Admin] Mostrando panel...');
   document.getElementById('auth-view').setAttribute('hidden', '');
   document.getElementById('admin-view').removeAttribute('hidden');
   document.getElementById('user-email').textContent = state.user.email;
@@ -330,10 +333,10 @@ function showAdmin() {
 }
 
 async function checkAuth() {
-  console.log('[Admin] Verificando sesión...');
+  dbg('[Admin] Verificando sesión...');
   try {
     const { data: { session } } = await sb.auth.getSession();
-    console.log('[Admin] Sesión:', session ? 'activa' : 'ninguna');
+    dbg('[Admin] Sesión:', session ? 'activa' : 'ninguna');
     if (session) {
       state.user = session.user;
       showAdmin();
@@ -346,24 +349,63 @@ async function checkAuth() {
   }
 }
 
+// Rate limiting para el login — máx 5 intentos, bloqueo 5 minutos
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_BLOCK_MS = 5 * 60 * 1000;
+
+function getLoginAttempts() {
+  try {
+    const d = JSON.parse(localStorage.getItem('vylo-login-attempts') || '{}');
+    return d;
+  } catch { return {}; }
+}
+function setLoginAttempts(data) {
+  localStorage.setItem('vylo-login-attempts', JSON.stringify(data));
+}
+function isLoginBlocked() {
+  const d = getLoginAttempts();
+  if (!d.blockedUntil) return false;
+  if (Date.now() < d.blockedUntil) return true;
+  // Bloqueo expirado — limpiar
+  setLoginAttempts({});
+  return false;
+}
+
 $('#login-form').addEventListener('submit', async e => {
   e.preventDefault();
+
+  // Verificar bloqueo
+  if (isLoginBlocked()) {
+    const d = getLoginAttempts();
+    const mins = Math.ceil((d.blockedUntil - Date.now()) / 60000);
+    $('#auth-error').textContent = `Demasiados intentos fallidos. Esperá ${mins} minuto${mins > 1 ? 's' : ''}.`;
+    return;
+  }
+
   const fd = new FormData(e.target);
-  const email = fd.get('email');
+  const email    = fd.get('email');
   const password = fd.get('password');
-  console.log('[Admin] Intentando login con:', email);
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
-  console.log('[Admin] Respuesta login:', { data, error });
-
   if (error) {
-    console.error('[Admin] Error de login:', error.message, error);
-    $('#auth-error').textContent = `Error: ${error.message}`;
+    // Incrementar contador
+    const d = getLoginAttempts();
+    d.count = (d.count || 0) + 1;
+    if (d.count >= LOGIN_MAX_ATTEMPTS) {
+      d.blockedUntil = Date.now() + LOGIN_BLOCK_MS;
+      $('#auth-error').textContent = `Demasiados intentos. Bloqueado por 5 minutos.`;
+    } else {
+      const remaining = LOGIN_MAX_ATTEMPTS - d.count;
+      $('#auth-error').textContent = `Credenciales incorrectas. ${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}.`;
+    }
+    setLoginAttempts(d);
     return;
   }
+
+  // Login exitoso — limpiar intentos
+  setLoginAttempts({});
   state.user = data.user;
-  console.log('[Admin] Login exitoso:', state.user.email);
   showAdmin();
 });
 
@@ -387,7 +429,7 @@ $('#toggle-password').addEventListener('click', () => {
 });
 
 function showAdmin() {
-  console.log('[Admin] Mostrando panel...');
+  dbg('[Admin] Mostrando panel...');
   $('#auth-view').hidden = true;
   $('#admin-view').hidden = false;
   $('#user-email').textContent = state.user.email;
@@ -398,14 +440,14 @@ function showAdmin() {
 // LISTA DE INVITACIONES
 // ============================================================
 async function loadInvitations() {
-  console.log('[Admin] Cargando invitaciones...');
+  dbg('[Admin] Cargando invitaciones...');
   try {
     const { data, error } = await sb
       .from('invitations')
       .select('id, slug, event_title, host_names, event_date, is_published')
       .order('created_at', { ascending: false });
 
-    console.log('[Admin] Invitaciones resultado:', { data, error });
+    dbg('[Admin] Invitaciones resultado:', { data, error });
     if (error) {
       console.error('[Admin] Error cargando invitaciones:', error);
       toast('Error: ' + error.message, 'error');
@@ -464,7 +506,7 @@ $('#new-invitation-btn').addEventListener('click', async () => {
     toast('El slug no puede estar vacío', 'error'); return;
   }
 
-  console.log('[Admin] Creando invitación con slug:', slug);
+  dbg('[Admin] Creando invitación con slug:', slug);
   const { data, error } = await sb
     .from('invitations')
     .insert({
@@ -1379,7 +1421,7 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
   const modal = { _clearBg: drawer._clearBg || false, _bgFile: drawer._bgFile || null };
   const fd = new FormData(f);
 
-  console.log('[Modal] Guardando sección:', section.section_type);
+  dbg('[Modal] Guardando sección:', section.section_type);
 
   // Reconstruir content
   const content = { ...(section.content || {}) };
@@ -1405,7 +1447,7 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
   const colsEditor = drawer.querySelector('.columns-editor');
   if (colsEditor) {
     const cols = JSON.parse(colsEditor.dataset.cols || '[]');
-    console.log('[Modal] Columnas guardadas:', JSON.stringify(cols));
+    dbg('[Modal] Columnas guardadas:', JSON.stringify(cols));
     content.columns = cols;
   }
 
@@ -1441,8 +1483,8 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
     content
   };
 
-  console.log('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
-  console.log('[Modal] Update a guardar:', update);
+  dbg('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
+  dbg('[Modal] Update a guardar:', update);
 
   // Imagen de fondo — leer desde modal._bgFile (el input fue clonado fuera del form)
   const bgFile = modal._bgFile || null;
@@ -1554,7 +1596,7 @@ $('#gallery-upload-input').addEventListener('change', async e => {
     const ext  = compressed.name.split('.').pop().toLowerCase();
     const path = `${state.currentInvitation.id}/gallery/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
 
-    console.log('[Gallery] Subiendo:', path, `(${Math.round(compressed.size/1024)}KB)`);
+    dbg('[Gallery] Subiendo:', path, `(${Math.round(compressed.size/1024)}KB)`);
     const { error: upErr } = await sb.storage
       .from(STORAGE_BUCKET)
       .upload(path, compressed, { cacheControl: '3600', upsert: false });
@@ -1903,10 +1945,15 @@ function sendPreviewMessage() {
   const previewSection = buildSectionFromForm();
   if (!previewSection) return;
 
+  // Incluir la posición de la sección para que el iframe pueda encontrarla exactamente
+  const allSections = state.currentSections || [];
+  const sectionIndex = allSections.findIndex(s => s.id === previewSection.id);
+
   try {
     previewIframe.contentWindow.postMessage({
       type: 'vylo-preview',
       section:    previewSection,
+      sectionIndex,
       invitation: state.currentInvitation,
       gallery:    state.currentGallery || [],
     }, '*');
