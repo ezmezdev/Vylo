@@ -197,9 +197,13 @@ function $$(sel, root = document) { return [...root.querySelectorAll(sel)]; }
 function toast(msg, type = 'success') {
   const t = $('#toast');
   t.textContent = msg;
-  t.className = `toast is-${type}`;
+  t.className = `toast is-${type} toast--in`;
   t.hidden = false;
-  setTimeout(() => { t.hidden = true; }, 3000);
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.classList.replace('toast--in', 'toast--out');
+    setTimeout(() => { t.hidden = true; t.classList.remove('toast--out'); }, 280);
+  }, 3000);
 }
 
 // ============================================================
@@ -491,49 +495,188 @@ function escapeHtml(s) {
 // ============================================================
 // CREAR / SELECCIONAR INVITACIÓN
 // ============================================================
-$('#new-invitation-btn').addEventListener('click', async () => {
-  const raw = prompt('Slug para la nueva invitación (ej: boda-ana-luis):');
-  if (raw === null) return; // canceló
+// ── Plantillas de invitación ──────────────────────────────
+const TEMPLATES = [
+  // CELEBRACIONES
+  { id: 'quince',    label: 'Quinceañera',  cat: 'Celebración', icon: 'ti-sparkles',
+    colors: { primary: '#1a0a0e', bg: '#fdf5f0', accent: '#c9614a' },
+    fonts: { heading: 'Cormorant Garamond', body: 'Manrope' },
+    event_type: 'quinceañera' },
+  { id: 'boda',      label: 'Casamiento',   cat: 'Celebración', icon: 'ti-heart',
+    colors: { primary: '#0f0d14', bg: '#faf7f2', accent: '#c9a961' },
+    fonts: { heading: 'Cormorant Garamond', body: 'Manrope' },
+    event_type: 'boda' },
+  { id: 'cumple',    label: 'Cumpleaños',   cat: 'Celebración', icon: 'ti-cake',
+    colors: { primary: '#1a0a2e', bg: '#f8f4ff', accent: '#9b59b6' },
+    fonts: { heading: 'Playfair Display', body: 'Manrope' },
+    event_type: 'cumpleaños' },
+  { id: 'bauti',     label: 'Bautismo',     cat: 'Celebración', icon: 'ti-droplet',
+    colors: { primary: '#0a1628', bg: '#f0f6ff', accent: '#4a90d9' },
+    fonts: { heading: 'Cormorant Garamond', body: 'Manrope' },
+    event_type: 'bautismo' },
+  // CORPORATIVOS
+  { id: 'corp_azul', label: 'Corporativo Azul', cat: 'Corporativo', icon: 'ti-building',
+    colors: { primary: '#0a1628', bg: '#f5f8fd', accent: '#1e5fa8' },
+    fonts: { heading: 'DM Serif Display', body: 'Manrope' },
+    event_type: 'evento corporativo' },
+  { id: 'corp_dark', label: 'Corporativo Dark', cat: 'Corporativo', icon: 'ti-building-skyscraper',
+    colors: { primary: '#f0f4f8', bg: '#0f1923', accent: '#4fc3f7' },
+    fonts: { heading: 'Cinzel', body: 'Manrope' },
+    event_type: 'evento corporativo' },
+  { id: 'corp_minima', label: 'Ejecutivo Minimal', cat: 'Corporativo', icon: 'ti-briefcase',
+    colors: { primary: '#1a1a1a', bg: '#ffffff', accent: '#2d2d2d' },
+    fonts: { heading: 'Manrope', body: 'Manrope' },
+    event_type: 'evento ejecutivo' },
+  // INSTITUCIONALES
+  { id: 'inst_gold',  label: 'Institucional Dorado', cat: 'Institucional', icon: 'ti-medal',
+    colors: { primary: '#1c1208', bg: '#fdfaf4', accent: '#b8860b' },
+    fonts: { heading: 'Cinzel', body: 'Manrope' },
+    event_type: 'evento institucional' },
+  { id: 'inst_verde', label: 'Institucional Verde', cat: 'Institucional', icon: 'ti-school',
+    colors: { primary: '#0d1f0d', bg: '#f4faf4', accent: '#2d6a2d' },
+    fonts: { heading: 'DM Serif Display', body: 'Manrope' },
+    event_type: 'graduación' },
+  { id: 'inst_slate', label: 'Institucional Gris', cat: 'Institucional', icon: 'ti-certificate',
+    colors: { primary: '#1e293b', bg: '#f8fafc', accent: '#475569' },
+    fonts: { heading: 'Cormorant Garamond', body: 'Manrope' },
+    event_type: 'evento académico' },
+  // INDUSTRIALES / TECH
+  { id: 'tech_neon',  label: 'Tech / Startup', cat: 'Industrial', icon: 'ti-bolt',
+    colors: { primary: '#e2e8f0', bg: '#0a0f1e', accent: '#00d4ff' },
+    fonts: { heading: 'Manrope', body: 'Manrope' },
+    event_type: 'lanzamiento' },
+  { id: 'ind_steel',  label: 'Industrial Steel', cat: 'Industrial', icon: 'ti-settings',
+    colors: { primary: '#f1f5f9', bg: '#1e2533', accent: '#64748b' },
+    fonts: { heading: 'Cinzel', body: 'Manrope' },
+    event_type: 'evento industrial' },
+  { id: 'ind_orange', label: 'Construcción / Energía', cat: 'Industrial', icon: 'ti-crane',
+    colors: { primary: '#1c0e00', bg: '#fff8f0', accent: '#e65c00' },
+    fonts: { heading: 'DM Serif Display', body: 'Manrope' },
+    event_type: 'evento sectorial' },
+];
 
-  // Limpiar automáticamente: minúsculas, reemplazar espacios y caracteres inválidos por guión
-  const slug = raw.trim().toLowerCase()
-    .replace(/\s+/g, '-')           // espacios → guión
-    .replace(/[^a-z0-9-]/g, '-')   // caracteres inválidos → guión
-    .replace(/-+/g, '-')            // guiones múltiples → uno solo
-    .replace(/^-|-$/g, '');         // quitar guiones al inicio/fin
+function openTemplateModal() {
+  let modal = document.getElementById('template-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'template-modal';
+    modal.className = 'template-modal-overlay';
+    modal.innerHTML = `
+      <div class="template-modal">
+        <header class="template-modal__header">
+          <h3>Nueva invitación — elegí una plantilla</h3>
+          <button type="button" class="drawer__close" id="template-modal-close">×</button>
+        </header>
+        <div class="template-modal__body">
+          <label class="template-slug-label">
+            <span>Slug (URL única)</span>
+            <input type="text" id="template-slug" placeholder="ej: boda-ana-luis" />
+          </label>
+          <div class="template-cats" id="template-cats"></div>
+          <div class="template-grid" id="template-grid"></div>
+        </div>
+        <footer class="template-modal__footer">
+          <button type="button" class="btn btn--ghost" id="template-cancel">Cancelar</button>
+          <button type="button" class="btn btn--primary" id="template-confirm">Crear invitación</button>
+        </footer>
+      </div>`;
+    document.body.appendChild(modal);
 
-  if (!slug) {
-    toast('El slug no puede estar vacío', 'error'); return;
+    let selectedTemplate = TEMPLATES[0];
+    let selectedCat = 'Todos';
+
+    const grid = modal.querySelector('#template-grid');
+    const catsEl = modal.querySelector('#template-cats');
+
+    // Categorías
+    const cats = ['Todos', ...new Set(TEMPLATES.map(t => t.cat))];
+    cats.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'template-cat-btn' + (cat === 'Todos' ? ' is-active' : '');
+      btn.textContent = cat;
+      btn.addEventListener('click', () => {
+        selectedCat = cat;
+        modal.querySelectorAll('.template-cat-btn').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        renderTemplateGrid();
+      });
+      catsEl.appendChild(btn);
+    });
+
+    function renderTemplateGrid() {
+      grid.innerHTML = '';
+      const filtered = selectedCat === 'Todos' ? TEMPLATES : TEMPLATES.filter(t => t.cat === selectedCat);
+      filtered.forEach(tpl => {
+        const card = document.createElement('div');
+        card.className = 'template-card' + (tpl.id === selectedTemplate.id ? ' is-selected' : '');
+        card.innerHTML = `
+          <div class="template-card__preview" style="background:${tpl.colors.bg}">
+            <div class="template-card__preview-title" style="color:${tpl.colors.primary};font-family:'${tpl.fonts.heading}',serif">Aa</div>
+            <div class="template-card__preview-accent" style="background:${tpl.colors.accent}"></div>
+          </div>
+          <div class="template-card__info">
+            <div class="template-card__name"><i class="ti ${tpl.icon}" aria-hidden="true"></i> ${tpl.label}</div>
+            <div class="template-card__cat">${tpl.cat}</div>
+          </div>`;
+        card.addEventListener('click', () => {
+          selectedTemplate = tpl;
+          grid.querySelectorAll('.template-card').forEach(c => c.classList.remove('is-selected'));
+          card.classList.add('is-selected');
+          // Sugerir slug basado en el tipo
+          const slugInput = modal.querySelector('#template-slug');
+          if (!slugInput.value) slugInput.value = tpl.event_type.replace(/\s+/g,'-').toLowerCase();
+        });
+        grid.appendChild(card);
+      });
+    }
+    renderTemplateGrid();
+
+    modal.querySelector('#template-modal-close').addEventListener('click', () => { modal.hidden = true; });
+    modal.querySelector('#template-cancel').addEventListener('click', () => { modal.hidden = true; });
+    modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+
+    modal.querySelector('#template-confirm').addEventListener('click', async () => {
+      const rawSlug = modal.querySelector('#template-slug').value.trim();
+      const slug = rawSlug.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+      if (!slug) { toast('Escribí un slug para la invitación', 'error'); return; }
+
+      modal.hidden = true;
+      const tpl = selectedTemplate;
+
+      const { data, error } = await sb.from('invitations').insert({
+        slug,
+        event_type:  tpl.event_type,
+        host_names:  'Anfitriones',
+        event_title: tpl.label,
+        event_date:  new Date(Date.now() + 90*86400000).toISOString(),
+        primary_color:    tpl.colors.primary,
+        background_color: tpl.colors.bg,
+        accent_color:     tpl.colors.accent,
+        heading_font:     tpl.fonts.heading,
+        body_font:        tpl.fonts.body,
+      }).select().single();
+      if (error) { toast(error.message, 'error'); return; }
+
+      const sections = [
+        { section_type:'hero',      position:0, content:{subtitle:'',quote:''} },
+        { section_type:'countdown', position:1, content:{title:'Cuenta regresiva',subtitle:''} },
+        { section_type:'rsvp',      position:2, content:{title:'Confirma tu asistencia',button_text:'Confirmar'} },
+        { section_type:'calendar',  position:3, content:{title:'Guarda la fecha',button_text:'Agregar al calendario',duration_hours:4} },
+        { section_type:'gallery',   position:4, content:{title:'Galería',subtitle:''} },
+      ].map(s => ({ ...s, invitation_id: data.id, is_enabled: true }));
+
+      await sb.from('sections').insert(sections);
+      toast('Invitación creada con plantilla ' + tpl.label + ' ✓');
+      await loadInvitations();
+      await selectInvitation(data.id);
+      modal.querySelector('#template-slug').value = '';
+    });
   }
+  modal.hidden = false;
+}
 
-  dbg('[Admin] Creando invitación con slug:', slug);
-  const { data, error } = await sb
-    .from('invitations')
-    .insert({
-      slug,
-      event_type: 'boda',
-      host_names: 'Anfitriones',
-      event_title: 'Nuevo Evento',
-      event_date: new Date(Date.now() + 90 * 86400000).toISOString()
-    })
-    .select()
-    .single();
-  if (error) { toast(error.message, 'error'); return; }
-
-  // Crear las 5 secciones por defecto
-  const defaultSections = [
-    { section_type: 'hero',      position: 0, content: { subtitle: '', quote: '' } },
-    { section_type: 'countdown', position: 1, content: { title: 'Cuenta regresiva', subtitle: '' } },
-    { section_type: 'rsvp',      position: 2, content: { title: 'Confirma tu asistencia', subtitle: '', button_text: 'Confirmar' } },
-    { section_type: 'calendar',  position: 3, content: { title: 'Guarda la fecha', subtitle: '', button_text: 'Agregar al calendario', duration_hours: 4 } },
-    { section_type: 'gallery',   position: 4, content: { title: 'Galería', subtitle: '' } }
-  ].map(s => ({ ...s, invitation_id: data.id }));
-
-  await sb.from('sections').insert(defaultSections);
-  await loadInvitations();
-  selectInvitation(data.id);
-  toast('Invitación creada');
-});
+$('#new-invitation-btn').addEventListener('click', openTemplateModal);
 
 async function selectInvitation(id) {
   $('#empty-state').hidden = true;
@@ -658,6 +801,17 @@ $('#form-theme').addEventListener('submit', async e => {
 // ============================================================
 // SECCIONES (lista, drag-and-drop, toggle, edición)
 // ============================================================
+const SECTION_ICONS = {
+  hero: 'ti-photo', countdown: 'ti-clock', rsvp: 'ti-checkbox',
+  calendar: 'ti-calendar', gallery: 'ti-layout-grid', location: 'ti-map-pin',
+  info: 'ti-layout-columns', gift: 'ti-gift', footer: 'ti-layout-bottombar',
+};
+const SECTION_COLORS = {
+  hero: '#6366f1', countdown: '#f59e0b', rsvp: '#10b981',
+  calendar: '#3b82f6', gallery: '#8b5cf6', location: '#ef4444',
+  info: '#06b6d4', gift: '#f97316', footer: '#6b7280',
+};
+
 function renderSectionsList() {
   const ul = $('#sections-list');
   ul.innerHTML = '';
@@ -667,11 +821,26 @@ function renderSectionsList() {
     li.className = `section-item ${section.is_enabled ? '' : 'is-disabled'}`;
     li.draggable = true;
     li.dataset.id = section.id;
+    const icon  = SECTION_ICONS[section.section_type]  || 'ti-layout';
+    const color = SECTION_COLORS[section.section_type] || '#6b7280';
+    const hasBg   = !!section.bg_image_url;
+    const hasContent = section.content && Object.keys(section.content).filter(k => section.content[k]).length > 0;
     li.innerHTML = `
-      <span class="section-item__drag" aria-hidden="true">⋮⋮</span>
+      <span class="section-item__drag" aria-hidden="true" title="Arrastrar para reordenar">
+        <i class="ti ti-grip-vertical" aria-hidden="true"></i>
+      </span>
+      <div class="section-item__icon" style="background:${color}18;color:${color}">
+        <i class="ti ${icon}" aria-hidden="true"></i>
+      </div>
       <div class="section-item__info">
         <div class="section-item__type">${sectionLabel(section.section_type)}</div>
-        <div class="section-item__meta">Posición ${i + 1} · ${section.is_enabled ? 'Habilitada' : 'Deshabilitada'}</div>
+        <div class="section-item__meta">
+          <span class="section-badge ${section.is_enabled ? 'badge-enabled' : 'badge-disabled'}">
+            ${section.is_enabled ? 'Activa' : 'Inactiva'}
+          </span>
+          ${hasBg ? '<span class="section-badge badge-info"><i class="ti ti-photo" aria-hidden="true"></i> foto</span>' : ''}
+          <span style="opacity:.5">pos. ${i + 1}</span>
+        </div>
       </div>
       <div class="section-item__actions">
         <button type="button" class="toggle ${section.is_enabled ? 'is-on' : ''}"
