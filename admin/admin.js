@@ -1348,8 +1348,14 @@ function contentFieldsFor(type) {
           { value: 'bevel',    label: '◻ Bisel tenue (sombra suave)' },
           { value: 'circle',   label: '⭕ Circular' },
           { value: 'minimal',  label: '— Minimal (sin caja, solo número)' },
+          { value: 'none',     label: '✕ Sin estilo (transparente, solo números)' },
         ]
       },
+      { key: 'num_size',   label: 'Tamaño de los números (ej: 4rem, 80px)', full: true,
+        help: 'Acepta px, rem, vw. Vacío = tamaño automático' },
+      { key: 'label_size', label: 'Tamaño del texto DÍAS/HORAS/etc. (ej: 0.7rem)', full: true },
+      { key: 'label_color', label: 'Color del texto DÍAS/HORAS/etc.', type: 'color', full: false,
+        help: 'Vacío = usa el color del tema' },
     ],
     rsvp: [
       ...common,
@@ -1467,6 +1473,7 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
     // tamaños individuales por campo de texto
     'title_size','subtitle_size','eyebrow_size','quote_size',
     'button_text_size','tagline_size','address_size',
+    'num_size','label_size',
   ];
   const colorFields = ['button_bg','button_color','button_bg_hover','button_color_hover'];
 
@@ -1940,6 +1947,7 @@ function buildSectionFromForm() {
     // tamaños individuales por campo de texto
     'title_size','subtitle_size','eyebrow_size','quote_size',
     'button_text_size','tagline_size','address_size',
+    'num_size','label_size',
   ];
   const colorFields    = ['button_bg','button_color','button_bg_hover','button_color_hover'];
   const checkboxFields = ['show_ics','show_hosts','show_event','show_date','show_logo'];
