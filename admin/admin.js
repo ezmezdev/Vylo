@@ -1593,6 +1593,12 @@ function contentFieldsFor(type) {
         help: 'Altura en desktop. Default: 380px' },
       { key: 'map_height_mobile', label: 'Altura mapa mobile (px)', type: 'number', min: 150, max: 500,
         help: 'Altura en mobile. Default: 260px' },
+      { key: 'button_bg',          label: 'Botón "Cómo llegar" — fondo',            type: 'color', full: false },
+      { key: 'button_color',       label: 'Botón "Cómo llegar" — texto',            type: 'color', full: false },
+      { key: 'button_bg_hover',    label: 'Botón "Cómo llegar" — fondo al hover',   type: 'color', full: false },
+      { key: 'button_color_hover', label: 'Botón "Cómo llegar" — texto al hover',   type: 'color', full: false },
+      { key: 'button_label',       label: 'Texto del botón', full: true,
+        help: 'Por defecto: "Cómo llegar"' },
     ],
     footer: [
       { key: 'tagline',    label: 'Texto pequeño (ej: Invitación digital)', full: true,
@@ -1664,7 +1670,7 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
     // tamaños individuales por campo de texto
     'title_size','subtitle_size','eyebrow_size','quote_size',
     'button_text_size','tagline_size','address_size',
-    'num_size','label_size',
+    'num_size','label_size','button_label',
   ];
   const colorFields = ['button_bg','button_color','button_bg_hover','button_color_hover'];
 
@@ -2151,7 +2157,7 @@ function buildSectionFromForm() {
     // tamaños individuales por campo de texto
     'title_size','subtitle_size','eyebrow_size','quote_size',
     'button_text_size','tagline_size','address_size',
-    'num_size','label_size',
+    'num_size','label_size','button_label',
   ];
   const colorFields    = ['button_bg','button_color','button_bg_hover','button_color_hover'];
   const checkboxFields = ['show_ics','show_hosts','show_event','show_date','show_logo'];
