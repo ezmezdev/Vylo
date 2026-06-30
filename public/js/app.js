@@ -904,6 +904,12 @@ function renderLocation(el, inv, content) {
   const dirLink = el.querySelector('[data-field="directions-link"]');
   if (address) {
     dirLink.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    // Texto personalizable
+    const btnText = dirLink.querySelector('.location__directions-text');
+    if (btnText) btnText.textContent = content.button_label || 'Cómo llegar';
+    else dirLink.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = content.button_label || 'Cómo llegar'; });
+    // Colores normales
+    applyBtnColors(dirLink, content);
   } else {
     dirLink.hidden = true;
   }
