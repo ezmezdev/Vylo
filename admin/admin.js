@@ -682,6 +682,19 @@ async function selectInvitation(id) {
   $('#empty-state').hidden = true;
   $('#editor').hidden = false;
 
+  // Cerrar drawer y limpiar TODO el estado de imagen al cambiar de proyecto
+  const drawer = document.getElementById('section-drawer');
+  if (drawer) {
+    drawer.hidden = true;
+    document.body.style.overflow = '';
+    drawer._bgFile   = null;
+    drawer._clearBg  = false;
+    if (drawer._previewBgUrl) {
+      URL.revokeObjectURL(drawer._previewBgUrl);
+      drawer._previewBgUrl = null;
+    }
+  }
+
   const [invRes, secRes, galRes] = await Promise.all([
     sb.from('invitations').select('*').eq('id', id).single(),
     sb.from('sections').select('*').eq('invitation_id', id).order('position'),
@@ -689,8 +702,8 @@ async function selectInvitation(id) {
   ]);
 
   state.currentInvitation = invRes.data;
-  state.currentSections = secRes.data || [];
-  state.currentGallery = galRes.data || [];
+  state.currentSections   = secRes.data || [];
+  state.currentGallery    = galRes.data || [];
 
   renderInvitationList();
   fillGeneralForm();
@@ -1376,9 +1389,17 @@ function openSectionModal(section) {
   const bgCurrent = $('#section-bg-current');
   const bgPreview = $('#section-bg-preview');
 
-  // SIEMPRE resetear el file input al abrir una sección nueva
+  // SIEMPRE resetear TODO el estado de imagen al abrir una sección nueva
+  // (bug: si no se resetea drawer._bgFile, la imagen de la sección anterior
+  //  queda pegada y se sube también a la sección que se abre después)
   bgFileInput.value = '';
   modal._clearBg = false;
+  drawer._clearBg = false;
+  drawer._bgFile = null;
+  if (drawer._previewBgUrl) {
+    URL.revokeObjectURL(drawer._previewBgUrl);
+    drawer._previewBgUrl = null;
+  }
 
   if (section.bg_image_url) {
     bgPreview.src = storageUrl(section.bg_image_url);
@@ -1465,8 +1486,9 @@ function openSectionModal(section) {
     blurValue.textContent = blurInput.value;
   });
 
-  // Abrir drawer
+  // Abrir drawer — marcar a qué invitación pertenece esta edición
   drawer.hidden = false;
+  drawer.dataset.invitationId = state.currentInvitation?.id || '';
   document.body.style.overflow = 'hidden';
   // Cargar preview
   loadPreview();
@@ -1701,23 +1723,28 @@ document.getElementById('section-drawer-form').addEventListener('submit', async 
   dbg('[Modal] Fuentes guardadas — heading:', fd.get('heading_font'), '| body:', fd.get('body_font'));
   dbg('[Modal] Update a guardar:', update);
 
-  // Imagen de fondo — leer desde modal._bgFile (el input fue clonado fuera del form)
-  const bgFile = modal._bgFile || null;
+  // Imagen de fondo — leer desde drawer._bgFile
+  // Solo usar si el drawer está en modo de esta invitación (evita imagen cruzada entre proyectos)
+  const drawerInvId   = drawer.dataset.invitationId;
+  const currentInvId  = state.currentInvitation?.id;
+  const bgFile = (drawerInvId === currentInvId) ? (modal._bgFile || null) : null;
 
   // Quitar imagen de fondo
   if (modal._clearBg) {
     update.bg_image_url = null;
   } else if (!bgFile || bgFile.size === 0) {
-    // No se tocó la imagen — preservar la actual
-    update.bg_image_url = section.bg_image_url || null;
+    // No se tocó la imagen — preservar solo si la sección es de esta invitación
+    update.bg_image_url = (section.invitation_id === currentInvId)
+      ? (section.bg_image_url || null)
+      : null;
   }
 
-  // Subir nueva imagen de fondo si se seleccionó
-  if (bgFile && bgFile.size > 0) {
+  // Subir nueva imagen si se seleccionó (y es de esta invitación)
+  if (bgFile && bgFile.size > 0 && drawerInvId === currentInvId) {
     toast('Comprimiendo imagen...');
     const compressed = await compressImage(bgFile, { maxW: 1920, maxH: 1920, quality: 0.82 });
     const ext  = compressed.name.split('.').pop().toLowerCase();
-    const path = `${state.currentInvitation.id}/sections/${section.id}-bg.${ext}`;
+    const path = `${currentInvId}/sections/${section.id}-bg.${ext}`;
     const { error: upErr } = await sb.storage
       .from(STORAGE_BUCKET).upload(path, compressed, { upsert: true });
     if (upErr) { toast('Error subiendo imagen: ' + upErr.message, 'error'); return; }
@@ -2094,10 +2121,18 @@ function reloadPreview() { loadPreview(); }
 function reloadPreviewAfterSave() { setTimeout(() => loadPreview(), 1000); }
 
 function closeDrawer() {
-  document.getElementById('section-drawer').hidden = true;
+  const drawer = document.getElementById('section-drawer');
+  drawer.hidden = true;
   document.body.style.overflow = '';
   previewReady = false;
   pendingPreviewSend = false;
+  // Limpiar estado de imagen pendiente para que no se filtre a la próxima sección
+  drawer._bgFile = null;
+  drawer._clearBg = false;
+  if (drawer._previewBgUrl) {
+    URL.revokeObjectURL(drawer._previewBgUrl);
+    drawer._previewBgUrl = null;
+  }
 }
 
 // ── Construir objeto sección desde el formulario ──
